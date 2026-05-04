@@ -181,7 +181,7 @@
   const now = new Date();
   let viewYear = now.getFullYear();
   let viewMonth = now.getMonth();
-  let targetHours = 151;
+  let targetHoursMap = {}; // keyed by "YYYY-M" -> number (hours)
   let dayStates = {};
   let loggedHours = {};
 
@@ -189,21 +189,28 @@
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ targetHours, dayStates, loggedHours }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ targetHoursMap, dayStates, loggedHours }));
     } catch(e) {}
   }
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (d) {
-        targetHours = d.targetHours || 151;
+        targetHoursMap = d.targetHoursMap || {};
         dayStates = d.dayStates || {};
         loggedHours = d.loggedHours || {};
-        document.getElementById('hours-slider').value = targetHours;
-        document.getElementById('hours-val').textContent = targetHours + ' h';
       }
     } catch(e) {}
+    // ensure slider shows current month target
+    const cur = getMonthKey(viewYear, viewMonth);
+    const tv = targetHoursMap[cur] !== undefined ? targetHoursMap[cur] : 151;
+    document.getElementById('hours-slider').value = tv;
+    document.getElementById('hours-val').textContent = tv + ' h';
   }
+
+  function getMonthKey(y, m) { return `${y}-${m}`; }
+  function getTargetFor(y, m) { const k = getMonthKey(y,m); return targetHoursMap[k] !== undefined ? targetHoursMap[k] : 151; }
+  function setTargetFor(y, m, v) { const k = getMonthKey(y,m); targetHoursMap[k] = v; }
 
   function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
   function firstDayOfWeek(y, m) { let d = new Date(y, m, 1).getDay(); return d === 0 ? 6 : d - 1; }
@@ -235,13 +242,42 @@
   }
   window.cycleState = cycleState;
 
+  function parseDurationInput(val) {
+    if (val === '' || val === null || val === undefined) return null;
+    if (typeof val === 'number') return val;
+    val = String(val).trim();
+    if (val === '') return null;
+    // accept H:MM or H.MM or decimal
+    if (val.indexOf(':') >= 0) {
+      const parts = val.split(':');
+      const hh = parseInt(parts[0]) || 0;
+      const mm = parseInt(parts[1]) || 0;
+      return hh + mm/60;
+    }
+    // normalize comma as decimal
+    const norm = val.replace(',', '.');
+    const v = parseFloat(norm);
+    if (!isNaN(v)) return v;
+    return null;
+  }
+
+  function formatInputHours(h) {
+    if (h === undefined || h === null || isNaN(h)) return '';
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    const mmAdj = mm === 60 ? 0 : mm;
+    const hhAdj = mm === 60 ? hh + 1 : hh;
+    return `${hhAdj}:${String(mmAdj).padStart(2,'0')}`;
+  }
+
   function setLogged(d, val) {
     let k = getKey(d);
-    let v = parseFloat(val);
-    if (isNaN(v) || v < 0) delete loggedHours[k];
-    else loggedHours[k] = v;
+    const parsed = parseDurationInput(val);
+    if (parsed === null || parsed < 0) delete loggedHours[k];
+    else loggedHours[k] = parsed;
     save();
     renderStats();
+    renderCalendar();
   }
   window.setLogged = setLogged;
 
@@ -266,13 +302,14 @@
       if (loggedHours[k] !== undefined) totalLogged += loggedHours[k];
       else remainingDays.push(d);
     }
-    let remaining = Math.max(0, targetHours - totalLogged);
+    const monthTarget = getTargetFor(viewYear, viewMonth);
+    let remaining = Math.max(0, monthTarget - totalLogged);
     let hPerRemaining = remainingDays.length > 0 ? remaining / remainingDays.length : 0;
-    return { presence: presenceDays.length, absent: absentCount, weekendWorked, totalLogged, remaining, remainingDays: remainingDays.length, hPerRemaining };
+    return { presence: presenceDays.length, absent: absentCount, weekendWorked, totalLogged, remaining, remainingDays: remainingDays.length, hPerRemaining, monthTarget };
   }
 
   function renderStats() {
-    let { presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining } = calcStats();
+    let { presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining, monthTarget } = calcStats();
     document.getElementById('stats-grid').innerHTML = `
       <div class="stat-card">
         <div class="stat-label">Days of presence</div>
@@ -282,7 +319,7 @@
       <div class="stat-card">
         <div class="stat-label">Hours logged</div>
         <div class="stat-value">${totalLogged % 1 === 0 ? totalLogged : totalLogged.toFixed(1)}</div>
-        <div class="stat-sub">of ${targetHours} h target</div>
+        <div class="stat-sub">of ${monthTarget} h target</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Hours remaining</div>
@@ -302,7 +339,7 @@
     } else if (remainingDays === 0 && remaining > 0) {
       bar.innerHTML = `<div class="alert danger">All days logged but ${remaining.toFixed(1)} h still missing.</div>`;
     } else if (remainingDays === 0) {
-      let diff = totalLogged - targetHours;
+      let diff = totalLogged - monthTarget;
       bar.innerHTML = `<div class="alert ok">All days logged. ${diff >= 0 ? '+' + diff.toFixed(1) : diff.toFixed(1)} h vs target.</div>`;
     } else {
       bar.innerHTML = `<div class="alert ok"><strong>${fmt(hPerRemaining)}/day</strong> over ${remainingDays} days · ${totalLogged.toFixed(1)} h done · ${remaining.toFixed(1)} h to go.</div>`;
@@ -323,7 +360,7 @@
       let hasDone = logged !== undefined ? ' done' : '';
       let present = isPresent(s);
       let inputHTML = present
-        ? `<input class="day-hours-input" type="number" min="0" step="0.5" placeholder="h" value="${logged !== undefined ? logged : ''}" onclick="event.stopPropagation()" onchange="setLogged(${d},this.value)" oninput="setLogged(${d},this.value)" inputmode="decimal" />`
+        ? `<input class="day-hours-input" type="text" placeholder="h:mm" value="${logged !== undefined ? formatInputHours(logged) : ''}" onclick="event.stopPropagation()" onchange="setLogged(${d},this.value)" oninput="setLogged(${d},this.value)" inputmode="numeric" />`
         : '';
       cal.insertAdjacentHTML('beforeend', `
         <div class="day-cell ${s}${hasDone}${today}">
@@ -344,15 +381,23 @@
 
   document.getElementById('prev').onclick = () => {
     if (viewMonth === 0) { viewMonth = 11; viewYear--; } else viewMonth--;
+    // update slider to new month
+    const tv = getTargetFor(viewYear, viewMonth);
+    document.getElementById('hours-slider').value = tv;
+    document.getElementById('hours-val').textContent = tv + ' h';
     render();
   };
   document.getElementById('next').onclick = () => {
     if (viewMonth === 11) { viewMonth = 0; viewYear++; } else viewMonth++;
+    const tv = getTargetFor(viewYear, viewMonth);
+    document.getElementById('hours-slider').value = tv;
+    document.getElementById('hours-val').textContent = tv + ' h';
     render();
   };
   document.getElementById('hours-slider').oninput = function() {
-    targetHours = parseInt(this.value);
-    document.getElementById('hours-val').textContent = targetHours + ' h';
+    const v = parseInt(this.value) || 0;
+    setTargetFor(viewYear, viewMonth, v);
+    document.getElementById('hours-val').textContent = v + ' h';
     save();
     renderStats();
   };
