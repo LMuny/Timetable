@@ -115,24 +115,28 @@
     .day-cell.empty { pointer-events: none; aspect-ratio: 1; }
     .day-inner { display: flex; flex-direction: column; align-items: center; padding: 5px 2px 4px; min-height: 52px; cursor: pointer; }
     .day-num { font-size: 12px; font-weight: 500; line-height: 1; margin-bottom: 2px; }
-    .day-hours-input {
-      width: 100%; text-align: center; background: none; border: none;
-      border-top: 1px solid rgba(128,128,128,0.15);
-      font-size: 11px; color: var(--text-secondary); padding: 3px 0;
-      outline: none; cursor: text; font-family: var(--font);
+    .day-time-row {
+      display: flex; align-items: center; justify-content: center;
+      border-top: 1px solid rgba(128,128,128,0.15); padding: 2px 0;
     }
-    .day-hours-input::placeholder { color: var(--text-tertiary); font-size: 10px; }
-    .day-hours-input:focus { color: var(--text); background: rgba(128,128,128,0.06); }
+    .day-h-input, .day-m-input {
+      width: 20px; text-align: center; background: none; border: none;
+      font-size: 10px; color: var(--text-secondary); padding: 1px 0;
+      outline: none; font-family: var(--font);
+    }
+    .day-h-input::placeholder, .day-m-input::placeholder { color: var(--text-tertiary); }
+    .day-h-input:focus, .day-m-input:focus { color: var(--text); background: rgba(128,128,128,0.06); }
+    .time-sep { font-size: 10px; color: var(--text-tertiary); line-height: 1; }
 
     .day-cell.workday { background: var(--bg-secondary); }
     .day-cell.workday.done { border-color: var(--border); }
     .day-cell.absent { background: var(--absent-bg); }
     .day-cell.absent .day-num { color: var(--absent-text); text-decoration: line-through; }
-    .day-cell.absent .day-hours-input { display: none; }
+    .day-cell.absent .day-time-row { display: none; }
     .day-cell.weekend { background: none; }
     .day-cell.weekend .day-num { color: var(--text-tertiary); }
     .day-cell.weekend .day-inner { cursor: pointer; }
-    .day-cell.weekend .day-hours-input { display: none; }
+    .day-cell.weekend .day-time-row { display: none; }
     .day-cell.weekend-worked { background: var(--we-bg); }
     .day-cell.weekend-worked .day-num { color: var(--we-text); }
     .day-cell.weekend-worked.done { border-color: var(--we-hover); }
@@ -174,22 +178,6 @@
   </div>
 </div>
 
-<!-- Hour picker modal -->
-<div id="hour-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:flex-end;justify-content:center;padding:16px;">
-  <div style="width:100%;max-width:480px;background:var(--bg);border-radius:12px;padding:12px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <div style="font-weight:600">Set hours</div>
-      <div id="picker-val" style="font-weight:600;color:var(--text-secondary)">0:00</div>
-    </div>
-    <input id="picker-range" type="range" min="0" max="720" step="5" value="0" style="width:100%" />
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
-      <button id="picker-clear" style="padding:8px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);">Clear</button>
-      <button id="picker-cancel" style="padding:8px 12px;border-radius:8px;background:transparent;border:1px solid var(--border);">Cancel</button>
-      <button id="picker-save" style="padding:8px 12px;border-radius:8px;background:var(--text-info);color:white;border:none;">Save</button>
-    </div>
-  </div>
-</div>
-
 <script>
   const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -197,36 +185,41 @@
   const now = new Date();
   let viewYear = now.getFullYear();
   let viewMonth = now.getMonth();
-  let targetHoursMap = {}; // keyed by "YYYY-M" -> number (hours)
+  let monthTargets = {};
+  const DEFAULT_TARGET = 151;
   let dayStates = {};
   let loggedHours = {};
+
+  function getMonthKey() { return `${viewYear}-${viewMonth}`; }
+  function getTargetHours() { return monthTargets[getMonthKey()] !== undefined ? monthTargets[getMonthKey()] : DEFAULT_TARGET; }
+  function updateSlider() {
+    let t = getTargetHours();
+    document.getElementById('hours-slider').value = t;
+    document.getElementById('hours-val').textContent = t + ' h';
+  }
 
   const STORAGE_KEY = 'hours-planner-data';
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ targetHoursMap, dayStates, loggedHours }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ monthTargets, dayStates, loggedHours }));
     } catch(e) {}
   }
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (d) {
-        targetHoursMap = d.targetHoursMap || {};
+        monthTargets = d.monthTargets || {};
+        // backward compat: single global targetHours migrated to current month
+        if (!d.monthTargets && typeof d.targetHours === 'number') {
+          monthTargets[getMonthKey()] = d.targetHours;
+        }
         dayStates = d.dayStates || {};
         loggedHours = d.loggedHours || {};
+        updateSlider();
       }
     } catch(e) {}
-    // ensure slider shows current month target
-    const cur = getMonthKey(viewYear, viewMonth);
-    const tv = targetHoursMap[cur] !== undefined ? targetHoursMap[cur] : 151;
-    document.getElementById('hours-slider').value = tv;
-    document.getElementById('hours-val').textContent = tv + ' h';
   }
-
-  function getMonthKey(y, m) { return `${y}-${m}`; }
-  function getTargetFor(y, m) { const k = getMonthKey(y,m); return targetHoursMap[k] !== undefined ? targetHoursMap[k] : 151; }
-  function setTargetFor(y, m, v) { const k = getMonthKey(y,m); targetHoursMap[k] = v; }
 
   function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
   function firstDayOfWeek(y, m) { let d = new Date(y, m, 1).getDay(); return d === 0 ? 6 : d - 1; }
@@ -258,44 +251,18 @@
   }
   window.cycleState = cycleState;
 
-  function parseDurationInput(val) {
-    if (val === '' || val === null || val === undefined) return null;
-    if (typeof val === 'number') return val;
-    val = String(val).trim();
-    if (val === '') return null;
-    // accept H:MM or H.MM or decimal
-    if (val.indexOf(':') >= 0) {
-      const parts = val.split(':');
-      const hh = parseInt(parts[0]) || 0;
-      const mm = parseInt(parts[1]) || 0;
-      return hh + mm/60;
-    }
-    // normalize comma as decimal
-    const norm = val.replace(',', '.');
-    const v = parseFloat(norm);
-    if (!isNaN(v)) return v;
-    return null;
-  }
-
-  function formatInputHours(h) {
-    if (h === undefined || h === null || isNaN(h)) return '';
-    const hh = Math.floor(h);
-    const mm = Math.round((h - hh) * 60);
-    const mmAdj = mm === 60 ? 0 : mm;
-    const hhAdj = mm === 60 ? hh + 1 : hh;
-    return `${hhAdj}:${String(mmAdj).padStart(2,'0')}`;
-  }
-
-  function setLogged(d, val) {
+  function setLoggedHM(d) {
     let k = getKey(d);
-    const parsed = parseDurationInput(val);
-    if (parsed === null || parsed < 0) delete loggedHours[k];
-    else loggedHours[k] = parsed;
+    let hEl = document.getElementById('dh-' + d);
+    let mEl = document.getElementById('dm-' + d);
+    let h = parseInt(hEl ? hEl.value : '0') || 0;
+    let m = parseInt(mEl ? mEl.value : '0') || 0;
+    if (h === 0 && m === 0) delete loggedHours[k];
+    else loggedHours[k] = h + m / 60;
     save();
     renderStats();
-    renderCalendar();
   }
-  window.setLogged = setLogged;
+  window.setLoggedHM = setLoggedHM;
 
   function fmt(h) {
     let hh = Math.floor(h), mm = Math.round((h - hh) * 60);
@@ -318,14 +285,13 @@
       if (loggedHours[k] !== undefined) totalLogged += loggedHours[k];
       else remainingDays.push(d);
     }
-    const monthTarget = getTargetFor(viewYear, viewMonth);
-    let remaining = Math.max(0, monthTarget - totalLogged);
+    let remaining = Math.max(0, getTargetHours() - totalLogged);
     let hPerRemaining = remainingDays.length > 0 ? remaining / remainingDays.length : 0;
-    return { presence: presenceDays.length, absent: absentCount, weekendWorked, totalLogged, remaining, remainingDays: remainingDays.length, hPerRemaining, monthTarget };
+    return { presence: presenceDays.length, absent: absentCount, weekendWorked, totalLogged, remaining, remainingDays: remainingDays.length, hPerRemaining };
   }
 
   function renderStats() {
-    let { presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining, monthTarget } = calcStats();
+    let { presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining } = calcStats();
     document.getElementById('stats-grid').innerHTML = `
       <div class="stat-card">
         <div class="stat-label">Days of presence</div>
@@ -335,7 +301,7 @@
       <div class="stat-card">
         <div class="stat-label">Hours logged</div>
         <div class="stat-value">${totalLogged % 1 === 0 ? totalLogged : totalLogged.toFixed(1)}</div>
-        <div class="stat-sub">of ${monthTarget} h target</div>
+        <div class="stat-sub">of ${getTargetHours()} h target</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Hours remaining</div>
@@ -355,7 +321,7 @@
     } else if (remainingDays === 0 && remaining > 0) {
       bar.innerHTML = `<div class="alert danger">All days logged but ${remaining.toFixed(1)} h still missing.</div>`;
     } else if (remainingDays === 0) {
-      let diff = totalLogged - monthTarget;
+      let diff = totalLogged - targetHours;
       bar.innerHTML = `<div class="alert ok">All days logged. ${diff >= 0 ? '+' + diff.toFixed(1) : diff.toFixed(1)} h vs target.</div>`;
     } else {
       bar.innerHTML = `<div class="alert ok"><strong>${fmt(hPerRemaining)}/day</strong> over ${remainingDays} days · ${totalLogged.toFixed(1)} h done · ${remaining.toFixed(1)} h to go.</div>`;
@@ -375,9 +341,19 @@
       let logged = loggedHours[k];
       let hasDone = logged !== undefined ? ' done' : '';
       let present = isPresent(s);
-      let inputHTML = present
-        ? `<input class="day-hours-input" type="text" readonly placeholder="h:mm" value="${logged !== undefined ? formatInputHours(logged) : ''}" onclick="event.stopPropagation(); openHourPicker(${d});" />`
-        : '';
+      let hh = '', mm = '';
+      if (logged !== undefined) {
+        let totalH = Math.floor(logged);
+        let totalM = Math.round((logged - totalH) * 60);
+        if (totalM === 60) { totalH++; totalM = 0; }
+        hh = totalH; mm = totalM.toString().padStart(2, '0');
+      }
+      let inputHTML = present ? `
+        <div class="day-time-row" onclick="event.stopPropagation()">
+          <input id="dh-${d}" class="day-h-input" type="number" min="0" max="24" step="1" placeholder="h" value="${hh}" onchange="setLoggedHM(${d})" oninput="setLoggedHM(${d})" inputmode="numeric" />
+          <span class="time-sep">:</span>
+          <input id="dm-${d}" class="day-m-input" type="number" min="0" max="59" step="1" placeholder="mm" value="${mm}" onchange="setLoggedHM(${d})" oninput="setLoggedHM(${d})" inputmode="numeric" />
+        </div>` : '';
       cal.insertAdjacentHTML('beforeend', `
         <div class="day-cell ${s}${hasDone}${today}">
           <div class="day-inner" onclick="cycleState(${d})">
@@ -391,81 +367,25 @@
 
   function render() {
     document.getElementById('month-label').textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+    updateSlider();
     renderCalendar();
     renderStats();
   }
 
   document.getElementById('prev').onclick = () => {
     if (viewMonth === 0) { viewMonth = 11; viewYear--; } else viewMonth--;
-    // update slider to new month
-    const tv = getTargetFor(viewYear, viewMonth);
-    document.getElementById('hours-slider').value = tv;
-    document.getElementById('hours-val').textContent = tv + ' h';
     render();
   };
   document.getElementById('next').onclick = () => {
     if (viewMonth === 11) { viewMonth = 0; viewYear++; } else viewMonth++;
-    const tv = getTargetFor(viewYear, viewMonth);
-    document.getElementById('hours-slider').value = tv;
-    document.getElementById('hours-val').textContent = tv + ' h';
     render();
   };
   document.getElementById('hours-slider').oninput = function() {
-    const v = parseInt(this.value) || 0;
-    setTargetFor(viewYear, viewMonth, v);
-    document.getElementById('hours-val').textContent = v + ' h';
+    monthTargets[getMonthKey()] = parseInt(this.value);
+    document.getElementById('hours-val').textContent = parseInt(this.value) + ' h';
     save();
     renderStats();
   };
-
-  // Hour picker logic (minutes slider)
-  const picker = document.getElementById('hour-picker');
-  const pickerRange = document.getElementById('picker-range');
-  const pickerVal = document.getElementById('picker-val');
-  let pickerDay = null;
-
-  function minutesToDisplay(mins) {
-    const hh = Math.floor(mins/60);
-    const mm = mins % 60;
-    return `${hh}:${String(mm).padStart(2,'0')}`;
-  }
-
-  pickerRange.oninput = function() {
-    pickerVal.textContent = minutesToDisplay(parseInt(this.value) || 0);
-  };
-
-  document.getElementById('picker-cancel').onclick = hidePicker;
-  document.getElementById('picker-clear').onclick = function() {
-    if (pickerDay !== null) {
-      setLogged(pickerDay, '');
-    }
-    hidePicker();
-  };
-  document.getElementById('picker-save').onclick = function() {
-    if (pickerDay !== null) {
-      const mins = parseInt(pickerRange.value) || 0;
-      setLogged(pickerDay, (mins/60));
-    }
-    hidePicker();
-  };
-
-  function openHourPicker(d) {
-    pickerDay = d;
-    const k = getKey(d);
-    const logged = loggedHours[k];
-    const mins = logged !== undefined ? Math.round(logged * 60) : 0;
-    pickerRange.value = mins;
-    pickerVal.textContent = minutesToDisplay(mins);
-    picker.style.display = 'flex';
-  }
-  window.openHourPicker = openHourPicker;
-
-  function hidePicker() {
-    picker.style.display = 'none';
-    pickerDay = null;
-    renderCalendar();
-    renderStats();
-  }
 
   load();
   render();
