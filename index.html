@@ -125,19 +125,6 @@
       transition: background 0.35s ease, background-position 0.18s ease-out;
     }
 
-    #vanta-bg {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100dvh;
-      z-index: -2;
-      pointer-events: none;
-    }
-
-    body.vanta-on {
-      background: transparent;
-    }
-
     body::before {
       content: '';
       position: fixed;
@@ -150,10 +137,6 @@
       background-size: 24px 24px;
       transform: translateY(calc(var(--scroll-shift) * 0.08));
       transition: transform 0.18s ease-out, opacity 0.35s ease;
-    }
-
-    body.vanta-on::before {
-      opacity: 0.2;
     }
 
     body::after {
@@ -170,10 +153,6 @@
         radial-gradient(35% 24% at 60% 72%, rgba(255, 255, 255, 0.18), transparent 76%);
       filter: blur(36px) saturate(118%);
       transform: translateY(calc(var(--scroll-shift) * -0.04));
-    }
-
-    body.vanta-on::after {
-      opacity: calc(var(--switch-tint-opacity) + 0.04);
     }
 
     body.view-planner { --switch-tint-opacity: 0.1; }
@@ -908,7 +887,6 @@
   </style>
 </head>
 <body>
-<div id="vanta-bg" aria-hidden="true"></div>
 <div id="app">
   <h1>Hours Planner</h1>
 
@@ -1030,8 +1008,6 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
 <script>
   const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1049,63 +1025,6 @@
   let ticker = null;
   let wheelDay = null;
   let editingLogId = null;
-  let vantaEffect = null;
-
-  function getVantaConfig() {
-    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (isDark) {
-      return {
-        highlightColor: 0x6d79ff,
-        midtoneColor: 0x3f4fb0,
-        lowlightColor: 0x242a5d,
-        baseColor: 0x10142a,
-        blurFactor: 0.78,
-        zoom: 2.2
-      };
-    }
-    return {
-      highlightColor: 0xd6e5ff,
-      midtoneColor: 0x8f8ce0,
-      lowlightColor: 0xb3aceb,
-      baseColor: 0xf3f6ff,
-      blurFactor: 0.68,
-      zoom: 2.1
-    };
-  }
-
-  function initVantaBackground() {
-    if (!window.VANTA || !window.VANTA.FOG) return;
-    if (vantaEffect && typeof vantaEffect.destroy === 'function') {
-      vantaEffect.destroy();
-      vantaEffect = null;
-    }
-    const cfg = getVantaConfig();
-    vantaEffect = window.VANTA.FOG({
-      el: '#vanta-bg',
-      mouseControls: true,
-      touchControls: true,
-      gyroControls: false,
-      minHeight: 200,
-      minWidth: 200,
-      highlightColor: cfg.highlightColor,
-      midtoneColor: cfg.midtoneColor,
-      lowlightColor: cfg.lowlightColor,
-      baseColor: cfg.baseColor,
-      blurFactor: cfg.blurFactor,
-      zoom: cfg.zoom
-    });
-    document.body.classList.add('vanta-on');
-  }
-
-  function bindVantaThemeSync() {
-    if (!window.matchMedia) return;
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    if (typeof mql.addEventListener === 'function') {
-      mql.addEventListener('change', () => initVantaBackground());
-    } else if (typeof mql.addListener === 'function') {
-      mql.addListener(() => initVantaBackground());
-    }
-  }
 
   function getMonthKey() { return `${viewYear}-${viewMonth}`; }
   function getTargetHours() { return monthTargets[getMonthKey()] !== undefined ? monthTargets[getMonthKey()] : DEFAULT_TARGET; }
@@ -1771,8 +1690,6 @@
   document.getElementById('edit-log-save').onclick = saveEditLogModal;
 
   load();
-  initVantaBackground();
-  bindVantaThemeSync();
   recoverTimerAfterLoad();
   bindSwipe();
   bindBackgroundParallax();
