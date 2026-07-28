@@ -61,34 +61,34 @@
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #101816;
-        --bg-secondary: #172320;
-        --bg-tertiary: #21302c;
-        --bg-success: #183427;
-        --bg-warning: #3b2e1c;
-        --bg-danger: #3b2020;
-        --bg-info: #1b2a44;
-        --text: #e8f2ee;
-        --text-secondary: #b0c6bf;
-        --text-tertiary: #7f9a92;
-        --text-success: #7dd9a0;
+        --bg: #0f1221;
+        --bg-secondary: #171b2f;
+        --bg-tertiary: #202845;
+        --bg-success: #1e2f4f;
+        --bg-warning: #413421;
+        --bg-danger: #3b2029;
+        --bg-info: #1f2f52;
+        --text: #eef1ff;
+        --text-secondary: #b7c2ef;
+        --text-tertiary: #8995c8;
+        --text-success: #a9bcff;
         --text-warning: #ffc67b;
         --text-danger: #f5a2a2;
         --text-info: #b7afff;
-        --border: #2a3a35;
-        --border-strong: #55796d;
-        --absent-bg: #442a22;
+        --border: #323a63;
+        --border-strong: #6672b2;
+        --absent-bg: #3d2730;
         --absent-text: #f4a988;
-        --we-bg: #113f34;
-        --we-text: #79d5bb;
-        --we-hover: #1f6f5b;
+        --we-bg: #1d2742;
+        --we-text: #9fb7ff;
+        --we-hover: #3b4f89;
         --workday-start: #1a1d24;
         --workday-end: #242a34;
         --workday-border: #343a46;
         --shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.35);
         --shadow-press: 0 4px 14px rgba(0, 0, 0, 0.45);
-        --bg-page-end: #0e1513;
-        --pattern-line: rgba(133, 182, 165, 0.08);
+        --bg-page-end: #10142a;
+        --pattern-line: rgba(128, 140, 211, 0.08);
         --title-shadow: rgba(0, 0, 0, 0.3);
         --highlight-start: #2a3154;
         --highlight-end: #213452;
@@ -117,10 +117,25 @@
         0 0;
       color: var(--text);
       min-height: 100dvh;
+      width: 100%;
       padding: env(safe-area-inset-top, 12px) env(safe-area-inset-right, 0)
         env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
       position: relative;
+      overflow-x: hidden;
       transition: background 0.35s ease, background-position 0.18s ease-out;
+    }
+
+    #vanta-bg {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    body.vanta-on {
+      background: transparent;
     }
 
     body::before {
@@ -137,6 +152,10 @@
       transition: transform 0.18s ease-out, opacity 0.35s ease;
     }
 
+    body.vanta-on::before {
+      opacity: 0.2;
+    }
+
     body::after {
       content: '';
       position: fixed;
@@ -151,6 +170,10 @@
         radial-gradient(35% 24% at 60% 72%, rgba(255, 255, 255, 0.18), transparent 76%);
       filter: blur(36px) saturate(118%);
       transform: translateY(calc(var(--scroll-shift) * -0.04));
+    }
+
+    body.vanta-on::after {
+      opacity: calc(var(--switch-tint-opacity) + 0.04);
     }
 
     body.view-planner { --switch-tint-opacity: 0.1; }
@@ -196,17 +219,16 @@
       position: absolute;
       top: 6px;
       left: 6px;
-      width: calc(50% - 6px);
+      width: calc(50% - 9px);
       height: calc(100% - 12px);
       border-radius: 999px;
       background: linear-gradient(135deg, var(--accent-a) 0%, var(--accent-b) 100%);
       box-shadow: var(--shadow-press);
-      transform: translateX(0%);
-      transition: transform 0.32s cubic-bezier(.2,.8,.2,1);
+      transition: left 0.32s cubic-bezier(.2,.8,.2,1);
       z-index: 0;
     }
     .view-switch.is-tracker::before {
-      transform: translateX(calc(100% + 6px));
+      left: calc(50% + 3px);
     }
     .view-switch button {
       position: relative;
@@ -422,6 +444,23 @@
       justify-content: center;
       border-top: 1px solid rgba(98, 130, 120, 0.2);
       padding: 3px 0;
+    }
+    .day-time-btn {
+      width: calc(100% - 8px);
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg-tertiary) 88%, transparent);
+      color: var(--text-secondary);
+      border-radius: 7px;
+      padding: 2px 4px;
+      font-size: 10px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+    }
+    .day-time-btn:active {
+      transform: scale(0.98);
     }
     .day-split {
       border-top: 1px solid rgba(98, 130, 120, 0.14);
@@ -688,6 +727,12 @@
       font-size: 14px;
       margin-bottom: 8px;
     }
+    .time-wheel-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
     .time-wheel-row {
       display: grid;
       grid-template-columns: 1fr auto 1fr;
@@ -711,7 +756,7 @@
     }
     .time-wheel-actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 8px;
     }
     .time-wheel-actions button {
@@ -728,6 +773,10 @@
       border: none;
       background: linear-gradient(135deg, var(--accent-a) 0%, var(--accent-b) 100%);
       color: #fff;
+    }
+    .time-wheel-actions .reset {
+      border-color: var(--text-warning);
+      color: var(--text-warning);
     }
 
     .log-edit-backdrop {
@@ -814,6 +863,42 @@
       }
     }
 
+    @media (max-width: 430px) {
+      #app {
+        padding: 12px 10px 16px;
+      }
+      h1 {
+        font-size: 22px;
+        margin-bottom: 12px;
+      }
+      .stats-grid {
+        gap: 8px;
+      }
+      .stat-card {
+        padding: 9px 10px;
+      }
+      .stat-value {
+        font-size: 21px;
+      }
+      .cal-grid {
+        gap: 4px;
+        padding: 8px;
+      }
+      .day-inner {
+        min-height: 48px;
+        padding: 4px 1px 3px;
+      }
+      .day-num {
+        font-size: 11px;
+      }
+      .day-time-btn {
+        font-size: 9px;
+      }
+      .day-split {
+        font-size: 8px;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       * {
         animation: none !important;
@@ -823,6 +908,7 @@
   </style>
 </head>
 <body>
+<div id="vanta-bg" aria-hidden="true"></div>
 <div id="app">
   <h1>Hours Planner</h1>
 
@@ -905,6 +991,7 @@
   <div id="time-wheel-backdrop" class="time-wheel-backdrop hidden" role="dialog" aria-modal="true">
     <div class="time-wheel" onclick="event.stopPropagation()">
       <div class="time-wheel-title">Set day total time</div>
+      <div id="wheel-meta" class="time-wheel-meta"></div>
       <div class="time-wheel-row">
         <select id="wheel-hour" class="time-wheel-select"></select>
         <span class="time-sep" style="font-size:18px;">:</span>
@@ -912,6 +999,7 @@
       </div>
       <div class="time-wheel-actions">
         <button id="wheel-cancel">Cancel</button>
+        <button id="wheel-reset" class="reset">Reset manual</button>
         <button id="wheel-apply" class="apply">Apply</button>
       </div>
     </div>
@@ -942,6 +1030,8 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"></script>
 <script>
   const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -959,7 +1049,63 @@
   let ticker = null;
   let wheelDay = null;
   let editingLogId = null;
-  const mobileWheelEnabled = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  let vantaEffect = null;
+
+  function getVantaConfig() {
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) {
+      return {
+        highlightColor: 0x6d79ff,
+        midtoneColor: 0x3f4fb0,
+        lowlightColor: 0x242a5d,
+        baseColor: 0x10142a,
+        blurFactor: 0.78,
+        zoom: 2.2
+      };
+    }
+    return {
+      highlightColor: 0xd6e5ff,
+      midtoneColor: 0x8f8ce0,
+      lowlightColor: 0xb3aceb,
+      baseColor: 0xf3f6ff,
+      blurFactor: 0.68,
+      zoom: 2.1
+    };
+  }
+
+  function initVantaBackground() {
+    if (!window.VANTA || !window.VANTA.FOG) return;
+    if (vantaEffect && typeof vantaEffect.destroy === 'function') {
+      vantaEffect.destroy();
+      vantaEffect = null;
+    }
+    const cfg = getVantaConfig();
+    vantaEffect = window.VANTA.FOG({
+      el: '#vanta-bg',
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200,
+      minWidth: 200,
+      highlightColor: cfg.highlightColor,
+      midtoneColor: cfg.midtoneColor,
+      lowlightColor: cfg.lowlightColor,
+      baseColor: cfg.baseColor,
+      blurFactor: cfg.blurFactor,
+      zoom: cfg.zoom
+    });
+    document.body.classList.add('vanta-on');
+  }
+
+  function bindVantaThemeSync() {
+    if (!window.matchMedia) return;
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', () => initVantaBackground());
+    } else if (typeof mql.addListener === 'function') {
+      mql.addListener(() => initVantaBackground());
+    }
+  }
 
   function getMonthKey() { return `${viewYear}-${viewMonth}`; }
   function getTargetHours() { return monthTargets[getMonthKey()] !== undefined ? monthTargets[getMonthKey()] : DEFAULT_TARGET; }
@@ -1107,6 +1253,21 @@
   }
   window.setLoggedHM = setLoggedHM;
 
+  function setLoggedDirect(d, h, m) {
+    let k = getKey(d);
+    let hh = Math.max(0, parseInt(h) || 0);
+    let mm = Math.max(0, parseInt(m) || 0);
+    if (hh > 24) hh = 24;
+    if (mm > 59) mm = 59;
+    let desiredTotal = hh + mm / 60;
+    let auto = getAutoHoursForDayKey(k);
+    let manual = desiredTotal - auto;
+    if (Math.abs(manual) < 0.001) delete loggedHours[k];
+    else loggedHours[k] = manual;
+    save();
+    render();
+  }
+
   function initWheelOptions() {
     let hSel = document.getElementById('wheel-hour');
     let mSel = document.getElementById('wheel-minute');
@@ -1129,19 +1290,22 @@
   }
 
   function openDayWheel(day) {
-    let hInput = document.getElementById('dh-' + day);
-    let mInput = document.getElementById('dm-' + day);
-    if (!hInput || !mInput) return;
     initWheelOptions();
     wheelDay = day;
     let hSel = document.getElementById('wheel-hour');
     let mSel = document.getElementById('wheel-minute');
-    let h = Math.max(0, parseInt(hInput.value || '0') || 0);
-    let m = Math.max(0, parseInt(mInput.value || '0') || 0);
+    let k = getKey(day);
+    let auto = getAutoHoursForDayKey(k);
+    let manual = getManualHoursForDayKey(k);
+    let total = Math.max(0, getTotalHoursForDayKey(k));
+    let h = Math.floor(total);
+    let m = Math.round((total - h) * 60);
+    if (m === 60) { h++; m = 0; }
     if (h > 24) h = 24;
     if (m > 59) m = 59;
     hSel.value = String(h);
     mSel.value = String(m);
+    document.getElementById('wheel-meta').innerHTML = `Tracked: <strong>${fmt(auto)}</strong> · Manual: <strong>${fmtSigned(manual)}</strong> · Total: <strong>${fmt(total)}</strong>`;
     document.getElementById('time-wheel-backdrop').classList.remove('hidden');
   }
 
@@ -1154,36 +1318,17 @@
     if (wheelDay === null) return;
     let h = parseInt(document.getElementById('wheel-hour').value) || 0;
     let m = parseInt(document.getElementById('wheel-minute').value) || 0;
-    let hInput = document.getElementById('dh-' + wheelDay);
-    let mInput = document.getElementById('dm-' + wheelDay);
-    if (hInput && mInput) {
-      hInput.value = String(h);
-      mInput.value = String(m).padStart(2, '0');
-      setLoggedHM(wheelDay);
-    }
+    setLoggedDirect(wheelDay, h, m);
     closeDayWheel();
   }
 
-  function bindMobileTimeWheel() {
-    if (!mobileWheelEnabled) return;
-    let cal = document.getElementById('calendar');
-    cal.addEventListener('click', (e) => {
-      let target = e.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (!target.classList.contains('day-h-input') && !target.classList.contains('day-m-input')) return;
-      e.preventDefault();
-      e.stopPropagation();
-      let id = target.id || '';
-      let day = parseInt(id.split('-')[1]) || 0;
-      if (day > 0) openDayWheel(day);
-    });
-    cal.addEventListener('focusin', (e) => {
-      let target = e.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (!target.classList.contains('day-h-input') && !target.classList.contains('day-m-input')) return;
-      e.preventDefault();
-      target.blur();
-    });
+  function resetManualForWheelDay() {
+    if (wheelDay === null) return;
+    let k = getKey(wheelDay);
+    delete loggedHours[k];
+    save();
+    closeDayWheel();
+    render();
   }
 
   function formatTime12(dt) {
@@ -1199,6 +1344,11 @@
     let hh = Math.floor(safe), mm = Math.round((safe - hh) * 60);
     if (mm === 60) { hh++; mm = 0; }
     return `${hh}h${mm.toString().padStart(2,'0')}`;
+  }
+
+  function fmtSigned(h) {
+    let sign = h < 0 ? '-' : '+';
+    return sign + fmt(Math.abs(h));
   }
 
   function ensureTodayIsPresent() {
@@ -1449,8 +1599,6 @@
       let today = isToday(viewYear, viewMonth, d) ? ' today' : '';
       let showRunning = timerState.active && k === todayKey;
       let logged = getTotalHoursForDayKey(k);
-      let autoH = getAutoHoursForDayKey(k);
-      let manualH = getManualHoursForDayKey(k);
       let hasDone = logged > 0 ? ' done' : '';
       let present = isPresent(s);
       let hh = '', mm = '';
@@ -1460,14 +1608,11 @@
         if (totalM === 60) { totalH++; totalM = 0; }
         hh = totalH; mm = totalM.toString().padStart(2, '0');
       }
-      let splitHTML = present ? `<div class="day-split">A <strong>${fmt(autoH)}</strong> · M <strong>${fmt(Math.max(0, manualH))}</strong></div>` : '';
+      let timeLabel = logged > 0 ? `${String(hh).padStart(2,'0')}:${mm}` : '00:00';
       let inputHTML = present ? `
         <div class="day-time-row" onclick="event.stopPropagation()">
-          <input id="dh-${d}" class="day-h-input" type="number" min="0" max="24" step="1" placeholder="h" value="${hh}" onchange="setLoggedHM(${d})" oninput="setLoggedHM(${d})" inputmode="numeric" />
-          <span class="time-sep">:</span>
-          <input id="dm-${d}" class="day-m-input" type="number" min="0" max="59" step="1" placeholder="mm" value="${mm}" onchange="setLoggedHM(${d})" oninput="setLoggedHM(${d})" inputmode="numeric" />
-        </div>
-        ${splitHTML}` : '';
+          <button class="day-time-btn" onclick="openDayWheel(${d});event.stopPropagation()">${timeLabel}</button>
+        </div>` : '';
       cal.insertAdjacentHTML('beforeend', `
         <div class="day-cell ${s}${hasDone}${today}">
           <div class="day-inner" onclick="cycleState(${d})">
@@ -1619,15 +1764,17 @@
   document.getElementById('add-manual-log').onclick = addManualLog;
   document.getElementById('time-wheel-backdrop').onclick = closeDayWheel;
   document.getElementById('wheel-cancel').onclick = closeDayWheel;
+  document.getElementById('wheel-reset').onclick = resetManualForWheelDay;
   document.getElementById('wheel-apply').onclick = applyDayWheel;
   document.getElementById('log-edit-backdrop').onclick = closeEditLogModal;
   document.getElementById('edit-log-cancel').onclick = closeEditLogModal;
   document.getElementById('edit-log-save').onclick = saveEditLogModal;
 
   load();
+  initVantaBackground();
+  bindVantaThemeSync();
   recoverTimerAfterLoad();
   bindSwipe();
-  bindMobileTimeWheel();
   bindBackgroundParallax();
   let now = new Date();
   document.getElementById('manual-date').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
