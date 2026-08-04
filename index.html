@@ -1100,7 +1100,16 @@
     return dayStates[k];
   }
 
+  function getDayStateForDayKey(dayKey) {
+    if (dayStates[dayKey] !== undefined) return dayStates[dayKey];
+    let parsed = parseDayKey(dayKey);
+    let inferred = isWeekendDate(parsed.y, parsed.m, parsed.d) ? 'weekend' : 'workday';
+    dayStates[dayKey] = inferred;
+    return inferred;
+  }
+
   function isPresent(s) { return s === 'workday' || s === 'weekend-worked'; }
+  function isMaskedDay(dayKey) { return !isPresent(getDayStateForDayKey(dayKey)); }
 
   function cycleState(d) {
     let k = getKey(d);
@@ -1108,16 +1117,8 @@
     let isWE = isWeekendDate(viewYear, viewMonth, d);
     if (isWE) {
       dayStates[k] = cur === 'weekend' ? 'weekend-worked' : 'weekend';
-      if (dayStates[k] === 'weekend') {
-        delete loggedHours[k];
-        removeLogsForDay(k);
-      }
     } else {
       dayStates[k] = cur === 'workday' ? 'absent' : 'workday';
-      if (dayStates[k] === 'absent') {
-        delete loggedHours[k];
-        removeLogsForDay(k);
-      }
     }
     let todayKey = getDayKeyFromDate(new Date());
     if (k === todayKey && timerState.active && !isPresent(dayStates[k])) {
@@ -1129,6 +1130,7 @@
   window.cycleState = cycleState;
 
   function getAutoHoursForDayKey(dayKey) {
+    if (isMaskedDay(dayKey)) return 0;
     let totalMs = 0;
     for (let entry of logs) {
       if (entry.dayKey === dayKey) totalMs += Math.max(0, (entry.endTs || 0) - (entry.startTs || 0));
@@ -1142,6 +1144,7 @@
   }
 
   function getTotalHoursForDayKey(dayKey) {
+    if (isMaskedDay(dayKey)) return 0;
     let auto = getAutoHoursForDayKey(dayKey);
     let manual = loggedHours[dayKey] || 0;
     return Math.max(0, auto + manual);
@@ -1665,7 +1668,20 @@
     render();
   };
   document.getElementById('hours-slider').oninput = function() {
-    monthTargets[getMonthKey()] = parseInt(this.value);
+    let val = parseInt(this.value, 10);
+    if (Number.isNaN(val)) val = getTargetHours();
+    val = Math.min(300, Math.max(1, val));
+    monthTargets[getMonthKey()] = val;
+    document.getElementById('hours-val').value = val;
+    save();
+    renderStats();
+  };
+  document.getElementById('hours-slider').onchange = function() {
+    let val = parseInt(this.value, 10);
+    if (Number.isNaN(val)) val = getTargetHours();
+    val = Math.min(300, Math.max(1, val));
+    monthTargets[getMonthKey()] = val;
+    document.getElementById('hours-val').value = val;
     save();
     render();
   };
