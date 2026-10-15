@@ -827,6 +827,174 @@
       background: linear-gradient(135deg, var(--accent-a) 0%, var(--accent-b) 100%);
       color: #fff;
     }
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .app-header h1 { margin-bottom: 0; }
+    .export-open-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      box-shadow: var(--shadow-soft);
+      transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+    .export-open-btn:active { transform: scale(0.97); border-color: var(--border-strong); }
+    .export-open-btn svg { width: 15px; height: 15px; }
+
+    .export-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 18, 15, 0.55);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 32;
+      padding: 12px;
+    }
+    .export-backdrop.hidden { display: none; }
+    .export-modal {
+      width: min(460px, 100%);
+      max-height: calc(100dvh - 24px);
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow-soft);
+      padding: 14px;
+      animation: wheel-in 0.2s ease;
+    }
+    .export-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+    .export-section { margin-bottom: 12px; }
+    .export-section-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .export-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .export-chip {
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .export-chip.active {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent-a) 0%, var(--accent-b) 100%);
+      color: #fff;
+    }
+    .export-dates {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .export-dates label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: block;
+      margin-bottom: 3px;
+      font-weight: 700;
+    }
+    .export-dates input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: 13px;
+      font-family: var(--font);
+      font-weight: 700;
+    }
+    .export-seg {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+    }
+    .export-seg button {
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 9px;
+      padding: 8px;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .export-seg button.active {
+      background: var(--bg-secondary);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    }
+    .export-hint {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+    .export-summary {
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-info);
+      color: var(--text-info);
+      margin-bottom: 12px;
+    }
+    .export-summary.error { background: var(--bg-danger); color: var(--text-danger); }
+    .export-actions {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 8px;
+    }
+    .export-actions button {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      background: var(--bg-tertiary);
+      color: var(--text);
+    }
+    .export-actions .download {
+      border: none;
+      background: linear-gradient(135deg, var(--accent-a) 0%, var(--accent-b) 100%);
+      color: #fff;
+    }
+    .export-actions .download:disabled { opacity: 0.45; cursor: not-allowed; }
+
     @keyframes wheel-in {
       from { transform: translateY(10px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
@@ -888,7 +1056,13 @@
 </head>
 <body>
 <div id="app">
-  <h1>Hours Planner</h1>
+  <div class="app-header">
+    <h1>Hours Planner</h1>
+    <button id="export-open" class="export-open-btn" aria-label="Export data">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Export
+    </button>
+  </div>
 
   <div class="view-switch">
     <button id="switch-planner" class="active">Planner</button>
@@ -1003,6 +1177,52 @@
       <div class="log-edit-actions">
         <button id="edit-log-cancel">Cancel</button>
         <button id="edit-log-save" class="save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="export-backdrop" class="export-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="export-title">
+    <div class="export-modal" onclick="event.stopPropagation()">
+      <div class="export-title" id="export-title">Export data</div>
+
+      <div class="export-section">
+        <div class="export-section-label">Period</div>
+        <div class="export-chips" id="export-presets"></div>
+      </div>
+
+      <div class="export-section export-dates">
+        <div>
+          <label for="export-from">From</label>
+          <input id="export-from" type="date" />
+        </div>
+        <div>
+          <label for="export-to">To</label>
+          <input id="export-to" type="date" />
+        </div>
+      </div>
+
+      <div class="export-section">
+        <div class="export-section-label">Format</div>
+        <div class="export-seg" id="export-format">
+          <button data-value="csv" class="active">CSV · spreadsheet</button>
+          <button data-value="json">JSON · full backup</button>
+        </div>
+      </div>
+
+      <div class="export-section" id="export-content-section">
+        <div class="export-section-label">Content</div>
+        <div class="export-seg" id="export-content">
+          <button data-value="daily" class="active">Daily totals</button>
+          <button data-value="sessions">Time logs</button>
+        </div>
+        <div class="export-hint" id="export-content-hint"></div>
+      </div>
+
+      <div class="export-summary" id="export-summary"></div>
+
+      <div class="export-actions">
+        <button id="export-cancel">Cancel</button>
+        <button id="export-download" class="download">Download</button>
       </div>
     </div>
   </div>
@@ -1651,6 +1871,277 @@
     });
   }
 
+  // ---- Export ----
+  let exportOpts = { preset: 'viewed', format: 'csv', content: 'daily' };
+
+  function toISODate(dt) {
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  }
+  function fromISODate(str) {
+    let p = (str || '').split('-').map(v => parseInt(v, 10));
+    if (p.length !== 3 || p.some(Number.isNaN)) return null;
+    return new Date(p[0], p[1] - 1, p[2]);
+  }
+  function toHHMM(dt) {
+    return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  }
+  function round2(n) { return Math.round(n * 100) / 100; }
+  function fmtColon(h) {
+    let safe = Math.max(0, h || 0);
+    let hh = Math.floor(safe), mm = Math.round((safe - hh) * 60);
+    if (mm === 60) { hh++; mm = 0; }
+    return `${hh}:${String(mm).padStart(2,'0')}`;
+  }
+
+  // Read-only day state lookup (getDayStateForDayKey writes inferred states into dayStates).
+  function peekDayState(dayKey) {
+    if (dayStates[dayKey] !== undefined) return dayStates[dayKey];
+    let p = parseDayKey(dayKey);
+    return isWeekendDate(p.y, p.m, p.d) ? 'weekend' : 'workday';
+  }
+
+  function getEarliestDataDate() {
+    let earliest = null;
+    for (let l of logs) {
+      if (!earliest || l.startTs < earliest.getTime()) earliest = new Date(l.startTs);
+    }
+    for (let k of Object.keys(loggedHours)) {
+      let p = parseDayKey(k);
+      let dt = new Date(p.y, p.m, p.d);
+      if (!earliest || dt < earliest) earliest = dt;
+    }
+    return earliest || new Date();
+  }
+
+  function getExportPresets() {
+    let today = new Date();
+    today = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    let weekStart = new Date(today); weekStart.setDate(today.getDate() - dow);
+    let weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+    let last30 = new Date(today); last30.setDate(today.getDate() - 29);
+    let prevY = viewMonth === 0 ? viewYear - 1 : viewYear;
+    let prevM = viewMonth === 0 ? 11 : viewMonth - 1;
+    return [
+      { id: 'viewed', label: `${MONTH_NAMES[viewMonth]} ${viewYear}`, from: new Date(viewYear, viewMonth, 1), to: new Date(viewYear, viewMonth + 1, 0) },
+      { id: 'prev', label: `${MONTH_NAMES[prevM]} ${prevY}`, from: new Date(prevY, prevM, 1), to: new Date(prevY, prevM + 1, 0) },
+      { id: 'week', label: 'This week', from: weekStart, to: weekEnd },
+      { id: 'last30', label: 'Last 30 days', from: last30, to: today },
+      { id: 'year', label: `Year ${today.getFullYear()}`, from: new Date(today.getFullYear(), 0, 1), to: new Date(today.getFullYear(), 11, 31) },
+      { id: 'all', label: 'All time', from: getEarliestDataDate(), to: today }
+    ];
+  }
+
+  function renderExportPresets() {
+    document.getElementById('export-presets').innerHTML = getExportPresets().map(p =>
+      `<button class="export-chip${exportOpts.preset === p.id ? ' active' : ''}" data-preset="${p.id}">${p.label}</button>`
+    ).join('');
+  }
+
+  function applyExportPreset(id) {
+    let p = getExportPresets().find(x => x.id === id);
+    if (!p) return;
+    exportOpts.preset = id;
+    document.getElementById('export-from').value = toISODate(p.from);
+    document.getElementById('export-to').value = toISODate(p.to);
+    renderExportPresets();
+    updateExportSummary();
+  }
+
+  function getExportRange() {
+    let from = fromISODate(document.getElementById('export-from').value);
+    let to = fromISODate(document.getElementById('export-to').value);
+    if (!from || !to) return { error: 'Pick both a start and an end date.' };
+    if (to < from) return { error: 'The end date is before the start date.' };
+    return { from, to };
+  }
+
+  function buildExportData(from, to) {
+    let toEndTs = new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1).getTime();
+    let sessions = logs
+      .filter(l => l.startTs >= from.getTime() && l.startTs < toEndTs)
+      .sort((a, b) => a.startTs - b.startTs);
+
+    let trackedByDay = {};
+    for (let l of logs) trackedByDay[l.dayKey] = (trackedByDay[l.dayKey] || 0) + Math.max(0, (l.endTs || 0) - (l.startTs || 0)) / 3600000;
+
+    let days = [];
+    let months = [];
+    for (let dt = new Date(from); dt <= to; dt.setDate(dt.getDate() + 1)) {
+      let k = getDayKeyFromDate(dt);
+      let state = peekDayState(k);
+      let present = isPresent(state);
+      let tracked = present ? (trackedByDay[k] || 0) : 0;
+      let manual = present ? (loggedHours[k] || 0) : 0;
+      days.push({
+        date: toISODate(dt),
+        weekday: DAY_NAMES[dt.getDay() === 0 ? 6 : dt.getDay() - 1],
+        status: state,
+        trackedHours: round2(tracked),
+        manualHours: round2(manual),
+        totalHours: round2(Math.max(0, tracked + manual))
+      });
+      let mk = getMonthKeyFromDate(dt);
+      if (!months.includes(mk)) months.push(mk);
+    }
+
+    let targets = months.map(mk => {
+      let [y, m] = mk.split('-').map(Number);
+      return { month: `${y}-${String(m + 1).padStart(2,'0')}`, targetHours: monthTargets[mk] !== undefined ? monthTargets[mk] : DEFAULT_TARGET };
+    });
+    let totalHours = days.reduce((sum, d) => sum + d.totalHours, 0);
+    return { days, sessions, targets, totalHours };
+  }
+
+  function updateExportSummary() {
+    let box = document.getElementById('export-summary');
+    let btn = document.getElementById('export-download');
+    let range = getExportRange();
+    if (range.error) {
+      box.className = 'export-summary error';
+      box.textContent = range.error;
+      btn.disabled = true;
+      return;
+    }
+    let { days, sessions, totalHours } = buildExportData(range.from, range.to);
+    let presentDays = days.filter(d => isPresent(d.status)).length;
+    box.className = 'export-summary';
+    box.innerHTML = `<strong>${days.length} ${days.length === 1 ? 'day' : 'days'}</strong> · ${presentDays} present · ${sessions.length} time ${sessions.length === 1 ? 'log' : 'logs'} · <strong>${fmt(totalHours)}</strong> total`;
+    btn.disabled = false;
+
+    let isCsv = exportOpts.format === 'csv';
+    document.getElementById('export-content-section').style.display = isCsv ? '' : 'none';
+    document.getElementById('export-content-hint').textContent = exportOpts.content === 'daily'
+      ? 'One row per day: status, tracked time, manual adjustments and total.'
+      : 'One row per start/stop session from the tracker.';
+    btn.textContent = `Download ${isCsv ? 'CSV' : 'JSON'}`;
+  }
+
+  function csvCell(v) {
+    let s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  function buildExportFile() {
+    let range = getExportRange();
+    if (range.error) return null;
+    let { days, sessions, targets, totalHours } = buildExportData(range.from, range.to);
+    let fromStr = toISODate(range.from), toStr = toISODate(range.to);
+
+    if (exportOpts.format === 'json') {
+      let payload = {
+        app: 'Hours Planner',
+        exportedAt: new Date().toISOString(),
+        range: { from: fromStr, to: toStr },
+        summary: { days: days.length, presentDays: days.filter(d => isPresent(d.status)).length, sessions: sessions.length, totalHours: round2(totalHours) },
+        monthlyTargets: targets,
+        days,
+        sessions: sessions.map(l => {
+          let s = new Date(l.startTs), e = new Date(l.endTs);
+          return { date: toISODate(s), start: toHHMM(s), end: toHHMM(e), durationHours: round2((l.endTs - l.startTs) / 3600000), startISO: s.toISOString(), endISO: e.toISOString() };
+        })
+      };
+      return { name: `hours_${fromStr}_to_${toStr}.json`, type: 'application/json', text: JSON.stringify(payload, null, 2) };
+    }
+
+    let rows;
+    if (exportOpts.content === 'daily') {
+      rows = [['Date', 'Weekday', 'Status', 'Tracked (h)', 'Manual adjustment (h)', 'Total (h)', 'Total (h:mm)']];
+      for (let d of days) rows.push([d.date, d.weekday, d.status, d.trackedHours, d.manualHours, d.totalHours, fmtColon(d.totalHours)]);
+      rows.push([]);
+      rows.push(['Total', '', '', '', '', round2(totalHours), fmtColon(totalHours)]);
+    } else {
+      rows = [['Date', 'Weekday', 'Start', 'End', 'Duration (h)', 'Duration (h:mm)']];
+      let sum = 0;
+      for (let l of sessions) {
+        let s = new Date(l.startTs), e = new Date(l.endTs);
+        let dur = (l.endTs - l.startTs) / 3600000;
+        sum += dur;
+        rows.push([toISODate(s), DAY_NAMES[s.getDay() === 0 ? 6 : s.getDay() - 1], toHHMM(s), toHHMM(e), round2(dur), fmtColon(dur)]);
+      }
+      rows.push([]);
+      rows.push(['Total', '', '', '', round2(sum), fmtColon(sum)]);
+    }
+    let text = '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+    let suffix = exportOpts.content === 'daily' ? 'daily' : 'logs';
+    return { name: `hours_${suffix}_${fromStr}_to_${toStr}.csv`, type: 'text/csv;charset=utf-8', text };
+  }
+
+  async function downloadExport() {
+    let file = buildExportFile();
+    if (!file) return;
+    let blob = new Blob([file.text], { type: file.type });
+
+    // On phones (esp. installed iOS PWAs) the share sheet is more reliable than a download link.
+    let isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    if (isTouch && navigator.canShare) {
+      let shareFile = new File([blob], file.name, { type: file.type });
+      if (navigator.canShare({ files: [shareFile] })) {
+        try {
+          await navigator.share({ files: [shareFile], title: file.name });
+          closeExportModal();
+          return;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return;
+        }
+      }
+    }
+
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    closeExportModal();
+  }
+
+  function openExportModal() {
+    renderExportPresets();
+    applyExportPreset(exportOpts.preset === 'custom' ? 'viewed' : exportOpts.preset);
+    document.getElementById('export-backdrop').classList.remove('hidden');
+  }
+
+  function closeExportModal() {
+    document.getElementById('export-backdrop').classList.add('hidden');
+  }
+
+  function bindSegmented(id, key) {
+    let wrap = document.getElementById(id);
+    wrap.addEventListener('click', (e) => {
+      let btn = e.target.closest('button[data-value]');
+      if (!btn) return;
+      exportOpts[key] = btn.dataset.value;
+      wrap.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+      updateExportSummary();
+    });
+  }
+
+  function bindExport() {
+    document.getElementById('export-open').onclick = openExportModal;
+    document.getElementById('export-cancel').onclick = closeExportModal;
+    document.getElementById('export-backdrop').onclick = closeExportModal;
+    document.getElementById('export-download').onclick = downloadExport;
+    document.getElementById('export-presets').addEventListener('click', (e) => {
+      let chip = e.target.closest('[data-preset]');
+      if (chip) applyExportPreset(chip.dataset.preset);
+    });
+    let onDateEdit = () => {
+      exportOpts.preset = 'custom';
+      renderExportPresets();
+      updateExportSummary();
+    };
+    document.getElementById('export-from').addEventListener('input', onDateEdit);
+    document.getElementById('export-to').addEventListener('input', onDateEdit);
+    bindSegmented('export-format', 'format');
+    bindSegmented('export-content', 'content');
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeExportModal();
+    });
+  }
+
   function render() {
     document.getElementById('month-label').textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
     updateSlider();
@@ -1709,6 +2200,7 @@
   recoverTimerAfterLoad();
   bindSwipe();
   bindBackgroundParallax();
+  bindExport();
   let now = new Date();
   document.getElementById('manual-date').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('manual-start').value = '09:00';
