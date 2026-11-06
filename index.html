@@ -13,7 +13,8 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <!-- Loaded without blocking the page, so a bad connection can't hold up the app. -->
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
   <style>
     :root {
       color-scheme: light dark;
@@ -156,8 +157,8 @@
     }
 
     body.view-planner { --switch-tint-opacity: 0.1; }
-    body.view-tracker { --switch-tint-opacity: 0.22; }
-    body.view-tracker::after {
+    body.view-tracker, body.view-insights { --switch-tint-opacity: 0.22; }
+    body.view-tracker::after, body.view-insights::after {
       background:
         radial-gradient(48% 32% at 16% 24%, rgba(107, 94, 255, 0.3), transparent 70%),
         radial-gradient(42% 30% at 82% 30%, rgba(72, 157, 255, 0.32), transparent 72%),
@@ -184,7 +185,7 @@
     .view-switch {
       position: relative;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 6px;
       margin-bottom: 14px;
       padding: 6px;
@@ -197,17 +198,14 @@
       content: '';
       position: absolute;
       top: 6px;
-      left: 6px;
-      width: calc(50% - 9px);
+      left: calc(6px + var(--view-index, 0) * ((100% - 24px) / 3 + 6px));
+      width: calc((100% - 24px) / 3);
       height: calc(100% - 12px);
       border-radius: 999px;
       background: linear-gradient(135deg, var(--accent-a) 0%, var(--accent-b) 100%);
       box-shadow: var(--shadow-press);
       transition: left 0.32s cubic-bezier(.2,.8,.2,1);
       z-index: 0;
-    }
-    .view-switch.is-tracker::before {
-      left: calc(50% + 3px);
     }
     .view-switch button {
       position: relative;
@@ -407,10 +405,16 @@
       align-items: center;
       justify-content: center;
       gap: 2px;
+      width: 100%;
       padding: 6px 2px 4px;
       min-height: 54px;
       cursor: pointer;
+      background: none;
+      border: none;
+      color: inherit;
+      font: inherit;
     }
+    .day-inner:focus-visible { outline-offset: -2px; }
     .day-num {
       font-size: 12px;
       font-weight: 700;
@@ -995,6 +999,275 @@
     }
     .export-actions .download:disabled { opacity: 0.45; cursor: not-allowed; }
 
+    #export-format { grid-template-columns: repeat(3, 1fr); }
+    .export-name-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-tertiary);
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: 13px;
+      font-family: var(--font);
+      font-weight: 700;
+    }
+    .backup-section {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .backup-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .backup-actions button {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      background: var(--bg-tertiary);
+      color: var(--text);
+    }
+
+    button:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--accent-a);
+      outline-offset: 2px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+      margin: 0 auto;
+      max-width: 460px;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--text);
+      color: var(--bg-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.35;
+      box-shadow: var(--shadow-press);
+      animation: wheel-in 0.2s ease;
+    }
+    .toast.hidden { display: none; }
+    .toast span { flex: 1; }
+    .toast button {
+      border: none;
+      background: transparent;
+      color: inherit;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: underline;
+      cursor: pointer;
+      white-space: nowrap;
+      padding: 4px;
+    }
+
+    /* Reminders */
+    .reminders-card summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      list-style: none;
+    }
+    .reminders-card summary::-webkit-details-marker { display: none; }
+    .reminders-card summary::after {
+      content: '';
+      width: 7px;
+      height: 7px;
+      margin-left: -2px;
+      border-right: 2px solid var(--text-secondary);
+      border-bottom: 2px solid var(--text-secondary);
+      transform: rotate(45deg) translate(-2px, -2px);
+      transition: transform 0.18s ease;
+    }
+    .reminders-card[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+    .reminders-card summary .tracker-label:first-child { flex: 1; }
+    .reminder-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .reminder-row small {
+      display: block;
+      margin-top: 2px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+    .reminder-row input[type=checkbox] {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      accent-color: var(--accent-a);
+    }
+    .reminder-time {
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text);
+      border-radius: 9px;
+      padding: 6px 8px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Insights */
+    .insight-title {
+      font-family: var(--font-head);
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .insight-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+      margin: 2px 0 10px;
+    }
+    .pace-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 4px 0 2px;
+    }
+    .pace-value {
+      font-family: var(--font-head);
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.15;
+    }
+    .pace-pill {
+      flex-shrink: 0;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--bg-info);
+      color: var(--text-info);
+    }
+    .pace-pill.good { background: var(--bg-success); color: var(--text-success); }
+    .pace-pill.behind { background: var(--bg-warning); color: var(--text-warning); }
+    .meter {
+      position: relative;
+      height: 8px;
+      margin: 12px 0 6px;
+      border-radius: 999px;
+      background: var(--bg-tertiary);
+    }
+    .meter-fill {
+      height: 100%;
+      min-width: 0;
+      border-radius: 999px;
+      background: var(--accent-b);
+    }
+    .meter-mark {
+      position: absolute;
+      top: -3px;
+      width: 2px;
+      height: 14px;
+      margin-left: -1px;
+      border-radius: 1px;
+      background: var(--text);
+    }
+    .meter-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .bar-rows { display: grid; gap: 2px; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 74px 1fr 52px;
+      align-items: center;
+      gap: 8px;
+      min-height: 26px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .bar-row:hover { background: var(--bg-tertiary); }
+    .bar-label { color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+    .bar-row.current .bar-label { color: var(--text); font-weight: 800; }
+    .bar-plot {
+      position: relative;
+      height: 14px;
+      border-left: 1px solid var(--border);
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 0 4px 4px 0;
+      background: color-mix(in srgb, var(--accent-b) 42%, var(--bg-secondary));
+    }
+    .bar-row.current .bar-fill, .bar-rows.single .bar-fill { background: var(--accent-b); }
+    .bar-target {
+      position: absolute;
+      top: -3px;
+      width: 2px;
+      height: 20px;
+      margin-left: -1px;
+      background: var(--text-secondary);
+    }
+    .bar-value {
+      text-align: right;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .bar-value.empty { color: var(--text-tertiary); font-weight: 600; }
+    .insight-stats { margin-bottom: 10px; }
+    .insight-stats .stat-card { box-shadow: none; }
+    .earn-inputs {
+      display: grid;
+      grid-template-columns: 1fr 104px;
+      gap: 8px;
+      margin: 8px 0 10px;
+    }
+    .earn-inputs label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+      font-weight: 700;
+    }
+    .earn-inputs input, .earn-inputs select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .earn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     @keyframes wheel-in {
       from { transform: translateY(10px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
@@ -1058,26 +1331,30 @@
 <div id="app">
   <div class="app-header">
     <h1>Hours Planner</h1>
-    <button id="export-open" class="export-open-btn" aria-label="Export data">
+    <button id="export-open" class="export-open-btn" aria-label="Export or back up your data">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-      Export
+      Data
     </button>
   </div>
 
   <div class="view-switch">
-    <button id="switch-planner" class="active">Planner</button>
-    <button id="switch-tracker">Tracker</button>
+    <button id="switch-planner" class="active" aria-pressed="true">Planner</button>
+    <button id="switch-tracker" aria-pressed="false">Tracker</button>
+    <button id="switch-insights" aria-pressed="false">Insights</button>
+  </div>
+
+  <div class="top-bar">
+    <div class="month-nav">
+      <button id="prev" aria-label="Previous month">&#8592;</button>
+      <span class="month-label" id="month-label" aria-live="polite"></span>
+      <button id="next" aria-label="Next month">&#8594;</button>
+    </div>
   </div>
 
   <div id="planner-view" class="view-panel active">
   <div class="top-bar">
-    <div class="month-nav">
-      <button id="prev">&#8592;</button>
-      <span class="month-label" id="month-label"></span>
-      <button id="next">&#8594;</button>
-    </div>
     <div class="slider-row">
-      <label>Target</label>
+      <label for="hours-slider">Target</label>
       <input type="range" id="hours-slider" min="1" max="300" step="1" value="140" />
       <input class="slider-val" id="hours-val" type="number" min="1" max="300" step="1" value="140" aria-label="Monthly target hours" />
     </div>
@@ -1131,6 +1408,23 @@
       </div>
     </div>
 
+    <details class="tracker-card reminders-card">
+      <summary>
+        <span class="tracker-label">Reminders</span>
+        <span class="tracker-label" id="reminders-summary">Off</span>
+      </summary>
+      <div class="reminder-row">
+        <label for="reminder-start">Start the timer<small>If nothing is logged by this time on a day you work</small></label>
+        <input id="reminder-start-time" class="reminder-time" type="time" step="60" aria-label="Reminder time" />
+        <input id="reminder-start" type="checkbox" role="switch" />
+      </div>
+      <div class="reminder-row">
+        <label for="reminder-goal">Today's hours reached<small>When you reach today's "needed per day"</small></label>
+        <input id="reminder-goal" type="checkbox" role="switch" />
+      </div>
+      <div class="tracker-note" id="reminder-note"></div>
+    </details>
+
     <div class="tracker-card">
       <div class="tracker-row" style="margin-bottom:0;">
         <div class="tracker-label">Logs for selected month</div>
@@ -1138,6 +1432,24 @@
       </div>
     </div>
     <div id="log-list" class="log-list"></div>
+  </div>
+
+  <div id="insights-view" class="view-panel">
+    <div id="insights-content"></div>
+    <div class="tracker-card">
+      <div class="insight-title">Earnings estimate</div>
+      <div class="earn-inputs">
+        <div>
+          <label for="hourly-rate">Hourly rate</label>
+          <input id="hourly-rate" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0.00" />
+        </div>
+        <div>
+          <label for="hourly-currency">Currency</label>
+          <select id="hourly-currency"></select>
+        </div>
+      </div>
+      <div id="earnings-out"></div>
+    </div>
   </div>
 
   <div id="time-wheel-backdrop" class="time-wheel-backdrop hidden" role="dialog" aria-modal="true">
@@ -1183,7 +1495,7 @@
 
   <div id="export-backdrop" class="export-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="export-title">
     <div class="export-modal" onclick="event.stopPropagation()">
-      <div class="export-title" id="export-title">Export data</div>
+      <div class="export-title" id="export-title">Export &amp; backup</div>
 
       <div class="export-section">
         <div class="export-section-label">Period</div>
@@ -1204,9 +1516,16 @@
       <div class="export-section">
         <div class="export-section-label">Format</div>
         <div class="export-seg" id="export-format">
-          <button data-value="csv" class="active">CSV · spreadsheet</button>
-          <button data-value="json">JSON · full backup</button>
+          <button data-value="csv" class="active">CSV</button>
+          <button data-value="pdf">PDF</button>
+          <button data-value="json">JSON</button>
         </div>
+        <div class="export-hint" id="export-format-hint"></div>
+      </div>
+
+      <div class="export-section" id="export-name-section" style="display:none;">
+        <div class="export-section-label"><label for="export-name">Name on timesheet (optional)</label></div>
+        <input id="export-name" class="export-name-input" type="text" maxlength="60" autocomplete="name" />
       </div>
 
       <div class="export-section" id="export-content-section">
@@ -1221,10 +1540,25 @@
       <div class="export-summary" id="export-summary"></div>
 
       <div class="export-actions">
-        <button id="export-cancel">Cancel</button>
+        <button id="export-cancel">Close</button>
         <button id="export-download" class="download">Download</button>
       </div>
+
+      <div class="backup-section">
+        <div class="export-section-label">Backup</div>
+        <div class="export-hint" id="backup-status"></div>
+        <div class="backup-actions">
+          <button id="backup-download">Save backup</button>
+          <button id="backup-restore">Restore</button>
+        </div>
+        <input id="backup-file" type="file" accept=".json,application/json" hidden />
+      </div>
     </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite">
+    <span id="toast-text"></span>
+    <button id="toast-action" hidden></button>
   </div>
 </div>
 
@@ -1245,9 +1579,32 @@
   let ticker = null;
   let wheelDay = null;
   let editingLogId = null;
+  const CURRENCIES = ['EUR','USD','GBP','CHF','CAD','AUD','NZD','JPY','SEK','NOK','DKK','PLN'];
+  function guessCurrency() {
+    const byRegion = { US:'USD', GB:'GBP', CH:'CHF', CA:'CAD', AU:'AUD', NZ:'NZD', JP:'JPY', SE:'SEK', NO:'NOK', DK:'DKK', PL:'PLN' };
+    try {
+      return byRegion[new Intl.Locale(navigator.language).region] || 'EUR';
+    } catch (e) {
+      return 'EUR';
+    }
+  }
+  function defaultSettings() {
+    return {
+      hourlyRate: 0,
+      currency: guessCurrency(),
+      pdfName: '',
+      lastBackupAt: null,
+      reminders: { start: false, startTime: '09:00', goal: false, lastStartDay: null, lastGoalDay: null }
+    };
+  }
+  let settings = defaultSettings();
 
   function getMonthKey() { return `${viewYear}-${viewMonth}`; }
-  function getTargetHours() { return monthTargets[getMonthKey()] !== undefined ? monthTargets[getMonthKey()] : DEFAULT_TARGET; }
+  function getTargetFor(y, m) {
+    let t = monthTargets[`${y}-${m}`];
+    return t !== undefined ? t : DEFAULT_TARGET;
+  }
+  function getTargetHours() { return getTargetFor(viewYear, viewMonth); }
   function updateSlider() {
     let t = getTargetHours();
     document.getElementById('hours-slider').value = t;
@@ -1281,15 +1638,60 @@
   function atMidnightOf(dt) {
     return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
   }
+  function midnightAfter(dt) {
+    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + 1).getTime();
+  }
+
+  let toastTimer = null;
+  function showToast(message, action, duration) {
+    let box = document.getElementById('toast');
+    let btn = document.getElementById('toast-action');
+    document.getElementById('toast-text').textContent = message;
+    btn.hidden = !action;
+    btn.textContent = action ? action.label : '';
+    btn.onclick = action ? () => { hideToast(); action.run(); } : null;
+    box.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, duration || (action ? 10000 : 5000));
+  }
+  function hideToast() {
+    document.getElementById('toast').classList.add('hidden');
+  }
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ monthTargets, dayStates, loggedHours, logs, timerState }));
-    } catch(e) {}
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ monthTargets, dayStates, loggedHours, logs, timerState, settings }));
+      return true;
+    } catch(e) {
+      showToast("Couldn't save your changes on this device. Save a backup from Data before closing the app.", null, 10000);
+      return false;
+    }
   }
+
+  function mergeSettings(raw) {
+    let base = defaultSettings();
+    if (!raw || typeof raw !== 'object') return base;
+    let rate = Number(raw.hourlyRate);
+    if (Number.isFinite(rate) && rate >= 0) base.hourlyRate = rate;
+    if (CURRENCIES.includes(raw.currency)) base.currency = raw.currency;
+    if (typeof raw.pdfName === 'string') base.pdfName = raw.pdfName.slice(0, 60);
+    if (typeof raw.lastBackupAt === 'string' && !Number.isNaN(Date.parse(raw.lastBackupAt))) base.lastBackupAt = raw.lastBackupAt;
+    let r = raw.reminders;
+    if (r && typeof r === 'object') {
+      base.reminders.start = r.start === true;
+      base.reminders.goal = r.goal === true;
+      if (/^\d{2}:\d{2}$/.test(r.startTime)) base.reminders.startTime = r.startTime;
+      if (typeof r.lastStartDay === 'string') base.reminders.lastStartDay = r.lastStartDay;
+      if (typeof r.lastGoalDay === 'string') base.reminders.lastGoalDay = r.lastGoalDay;
+    }
+    return base;
+  }
+
   function load() {
+    let raw = null;
     try {
-      const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      raw = localStorage.getItem(STORAGE_KEY);
+      const d = JSON.parse(raw || 'null');
       if (d) {
         monthTargets = d.monthTargets || {};
         // backward compat: single global targetHours migrated to current month
@@ -1300,9 +1702,42 @@
         loggedHours = d.loggedHours || {};
         logs = Array.isArray(d.logs) ? d.logs : [];
         timerState = d.timerState || { active: false, startTs: null, startDayKey: null };
+        settings = mergeSettings(d.settings);
+        repairOverlongLogs(raw);
         updateSlider();
       }
-    } catch(e) {}
+    } catch(e) {
+      // Keep the unreadable data so the next save can't destroy it.
+      try { if (raw) localStorage.setItem(STORAGE_KEY + '-unreadable', raw); } catch(e2) {}
+      showToast("Your saved data couldn't be read. If you have a backup, restore it from Data.", null, 10000);
+    }
+  }
+
+  // Timers left running for 2+ days used to be closed at the wrong midnight,
+  // which saved logs longer than a day. Trim those back to the day they started,
+  // once, keeping a copy of the data as it was before.
+  function repairOverlongLogs(raw) {
+    let repaired = 0;
+    logs = logs.map((entry) => {
+      if (!entry || !(entry.endTs - entry.startTs > 24 * 3600000)) return entry;
+      let endTs = Math.min(entry.endTs, midnightAfter(new Date(entry.startTs)));
+      let removedHours = (entry.endTs - endTs) / 3600000;
+      if (removedHours <= 0) return entry;
+      repaired++;
+      // A negative adjustment means the day's total was corrected by hand, so keep that total.
+      let manual = loggedHours[entry.dayKey];
+      if (manual < 0) {
+        let adjusted = Math.min(0, manual + removedHours);
+        if (Math.abs(adjusted) < 0.001) delete loggedHours[entry.dayKey];
+        else loggedHours[entry.dayKey] = adjusted;
+      }
+      return { ...entry, endTs };
+    });
+    if (!repaired) return;
+    let copyKey = STORAGE_KEY + '-before-repair';
+    try { if (!localStorage.getItem(copyKey)) localStorage.setItem(copyKey, raw); } catch(e) {}
+    save();
+    showToast(`${repaired} time ${repaired === 1 ? 'log' : 'logs'} left running past midnight ${repaired === 1 ? 'was' : 'were'} trimmed to the end of that day. You can check them in Tracker.`, null, 10000);
   }
 
   function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
@@ -1320,16 +1755,13 @@
     return dayStates[k];
   }
 
-  function getDayStateForDayKey(dayKey) {
-    if (dayStates[dayKey] !== undefined) return dayStates[dayKey];
-    let parsed = parseDayKey(dayKey);
-    let inferred = isWeekendDate(parsed.y, parsed.m, parsed.d) ? 'weekend' : 'workday';
-    dayStates[dayKey] = inferred;
-    return inferred;
-  }
-
   function isPresent(s) { return s === 'workday' || s === 'weekend-worked'; }
-  function isMaskedDay(dayKey) { return !isPresent(getDayStateForDayKey(dayKey)); }
+  function isMaskedDay(dayKey) { return !isPresent(peekDayState(dayKey)); }
+
+  // Time logged on a day only counts while that day is marked as worked.
+  function markDayPresent(dt) {
+    dayStates[getDayKeyFromDate(dt)] = isWeekendDate(dt.getFullYear(), dt.getMonth(), dt.getDate()) ? 'weekend-worked' : 'workday';
+  }
 
   function cycleState(d) {
     let k = getKey(d);
@@ -1546,7 +1978,7 @@
     let start = new Date(timerState.startTs);
     let now = new Date();
     if (!sameDay(start, now)) {
-      finalizeTimer(atMidnightOf(now));
+      finalizeTimer(midnightAfter(start));
       render();
     }
   }
@@ -1556,7 +1988,7 @@
     let start = new Date(timerState.startTs);
     let now = new Date();
     if (!sameDay(start, now)) {
-      finalizeTimer(atMidnightOf(now));
+      finalizeTimer(midnightAfter(start));
     }
   }
 
@@ -1599,12 +2031,7 @@
       return;
     }
     let dayKey = getDayKeyFromDate(s);
-    let state = dayStates[dayKey];
-    if (!state) {
-      dayStates[dayKey] = isWeekendDate(s.getFullYear(), s.getMonth(), s.getDate()) ? 'weekend-worked' : 'workday';
-    } else if (!isPresent(state)) {
-      dayStates[dayKey] = isWeekendDate(s.getFullYear(), s.getMonth(), s.getDate()) ? 'weekend-worked' : 'workday';
-    }
+    markDayPresent(s);
     logs.push({
       id: `${s.getTime()}-${Math.random().toString(36).slice(2,8)}`,
       startTs: s.getTime(),
@@ -1649,10 +2076,12 @@
       alert('Invalid date/time values.');
       return;
     }
+    let movedToNewDay = entry.dayKey !== getDayKeyFromDate(s);
     entry.startTs = s.getTime();
     entry.endTs = e.getTime();
     entry.dayKey = getDayKeyFromDate(s);
     entry.monthKey = getMonthKeyFromDate(s);
+    if (movedToNewDay) markDayPresent(s);
     closeEditLogModal();
     save();
     render();
@@ -1668,29 +2097,48 @@
       .sort((a, b) => b.startTs - a.startTs);
   }
 
-  function calcStats() {
-    let total = daysInMonth(viewYear, viewMonth);
-    let presenceDays = [], absentCount = 0, weekendWorked = 0;
+  function calcStatsFor(y, m) {
+    let total = daysInMonth(y, m);
+    let target = getTargetFor(y, m);
+    let todayMs = atMidnightOf(new Date());
+    let presence = 0, absent = 0, weekendWorked = 0;
+    let totalLogged = 0, remainingDays = 0, missedDays = 0;
+    let hoursExcludingToday = 0, hoursBeforeToday = 0, presentBeforeToday = 0, todayHours = 0;
     for (let d = 1; d <= total; d++) {
-      let s = initState(d);
-      if (s === 'absent') absentCount++;
+      let k = `${y}-${m}-${d}`;
+      let s = peekDayState(k);
+      if (s === 'absent') absent++;
       else if (s === 'weekend-worked') weekendWorked++;
-      if (isPresent(s)) presenceDays.push(d);
+      if (!isPresent(s)) continue;
+      presence++;
+      let hours = getTotalHoursForDayKey(k);
+      let dayMs = new Date(y, m, d).getTime();
+      totalLogged += hours;
+      if (dayMs === todayMs) {
+        // Today always counts as a day left, so the daily figure stays put while you work.
+        remainingDays++;
+        todayHours = hours;
+      } else {
+        hoursExcludingToday += hours;
+        if (dayMs < todayMs) {
+          presentBeforeToday++;
+          hoursBeforeToday += hours;
+          if (hours === 0) missedDays++;
+        } else if (hours === 0) {
+          remainingDays++;
+        }
+      }
     }
-    let totalLogged = 0, remainingDays = [];
-    for (let d of presenceDays) {
-      let k = getKey(d);
-      let dayTotal = getTotalHoursForDayKey(k);
-      if (dayTotal > 0) totalLogged += dayTotal;
-      else remainingDays.push(d);
-    }
-    let remaining = Math.max(0, getTargetHours() - totalLogged);
-    let hPerRemaining = remainingDays.length > 0 ? remaining / remainingDays.length : 0;
-    return { presence: presenceDays.length, absent: absentCount, weekendWorked, totalLogged, remaining, remainingDays: remainingDays.length, hPerRemaining };
+    let remaining = Math.max(0, target - totalLogged);
+    let hPerRemaining = remainingDays > 0 ? Math.max(0, target - hoursExcludingToday) / remainingDays : 0;
+    return {
+      target, presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining, missedDays,
+      hoursBeforeToday, presentBeforeToday, todayHours, hoursToDate: hoursBeforeToday + todayHours
+    };
   }
 
   function renderStats() {
-    let { presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining } = calcStats();
+    let { presence, absent, weekendWorked, totalLogged, remaining, remainingDays, hPerRemaining, missedDays } = calcStatsFor(viewYear, viewMonth);
     document.getElementById('stats-grid').innerHTML = `
       <div class="stat-card">
         <div class="stat-label">Days of presence</div>
@@ -1710,20 +2158,25 @@
       <div class="stat-card highlight">
         <div class="stat-label">Needed per day</div>
         <div class="stat-value">${remainingDays > 0 ? fmt(hPerRemaining) : '—'}</div>
-        <div class="stat-sub">${remainingDays > 0 ? hPerRemaining.toFixed(2) + ' h/day' : 'all days logged'}</div>
+        <div class="stat-sub">${remainingDays > 0 ? hPerRemaining.toFixed(2) + ' h/day' : 'no days left'}</div>
       </div>
     `;
 
     let bar = document.getElementById('alert-bar');
     if (presence === 0) {
       bar.innerHTML = `<div class="alert danger">No days of presence — adjust your selections.</div>`;
+    } else if (remainingDays === 0 && totalLogged === 0) {
+      bar.innerHTML = `<div class="alert warn">No hours logged this month.</div>`;
     } else if (remainingDays === 0 && remaining > 0) {
-      bar.innerHTML = `<div class="alert danger">All days logged but ${remaining.toFixed(1)} h still missing.</div>`;
+      bar.innerHTML = `<div class="alert danger">No days left and ${remaining.toFixed(1)} h still missing.</div>`;
     } else if (remainingDays === 0) {
       let diff = totalLogged - getTargetHours();
-      bar.innerHTML = `<div class="alert ok">All days logged. ${diff >= 0 ? '+' + diff.toFixed(1) : diff.toFixed(1)} h vs target.</div>`;
+      bar.innerHTML = `<div class="alert ok">No days left. ${diff >= 0 ? '+' + diff.toFixed(1) : diff.toFixed(1)} h vs target.</div>`;
     } else {
-      bar.innerHTML = `<div class="alert ok"><strong>${fmt(hPerRemaining)}/day</strong> over ${remainingDays} days · ${totalLogged.toFixed(1)} h done · ${remaining.toFixed(1)} h to go.</div>`;
+      bar.innerHTML = `<div class="alert ok"><strong>${fmt(hPerRemaining)}/day</strong> over ${remainingDays} ${remainingDays === 1 ? 'day' : 'days'} · ${totalLogged.toFixed(1)} h done · ${remaining.toFixed(1)} h to go.</div>`;
+      if (missedDays > 0) {
+        bar.insertAdjacentHTML('beforeend', `<div class="alert warn">${missedDays} past ${missedDays === 1 ? 'workday has' : 'workdays have'} no hours, so ${missedDays === 1 ? "it isn't" : "they aren't"} counted as days left.</div>`);
+      }
     }
   }
 
@@ -1751,16 +2204,18 @@
         hh = totalH; mm = totalM.toString().padStart(2, '0');
       }
       let timeLabel = logged > 0 ? `${String(hh).padStart(2,'0')}:${mm}` : '00:00';
+      let dayName = `${MONTH_NAMES[viewMonth]} ${d}`;
+      let stateName = { workday: 'workday', absent: 'absent', weekend: 'weekend', 'weekend-worked': 'weekend worked' }[s];
       let inputHTML = present ? `
         <div class="day-time-row" onclick="event.stopPropagation()">
-          <button class="day-time-btn" onclick="openDayWheel(${d});event.stopPropagation()">${timeLabel}</button>
+          <button class="day-time-btn" aria-label="Set hours for ${dayName}, currently ${timeLabel}" onclick="openDayWheel(${d});event.stopPropagation()">${timeLabel}</button>
         </div>` : '';
       cal.insertAdjacentHTML('beforeend', `
         <div class="day-cell ${s}${hasDone}${today}">
-          <div class="day-inner" onclick="cycleState(${d})">
+          <button class="day-inner" aria-label="${dayName}, ${stateName}. Change day type" onclick="cycleState(${d})">
             <span class="day-num">${d}</span>
             ${showRunning ? '<span class="day-running"><span class="run-dot"></span>RUN</span>' : ''}
-          </div>
+          </button>
           ${inputHTML}
         </div>
       `);
@@ -1816,20 +2271,308 @@
     }).join('');
   }
 
+  const VIEWS = ['planner', 'tracker', 'insights'];
+
   function setView(view) {
     activeView = view;
-    let planner = document.getElementById('planner-view');
-    let tracker = document.getElementById('tracker-view');
-    let switchWrap = document.querySelector('.view-switch');
-    let bPlanner = document.getElementById('switch-planner');
-    let bTracker = document.getElementById('switch-tracker');
-    planner.classList.toggle('active', view === 'planner');
-    tracker.classList.toggle('active', view === 'tracker');
-    bPlanner.classList.toggle('active', view === 'planner');
-    bTracker.classList.toggle('active', view === 'tracker');
-    if (switchWrap) switchWrap.classList.toggle('is-tracker', view === 'tracker');
-    document.body.classList.toggle('view-tracker', view === 'tracker');
-    document.body.classList.toggle('view-planner', view === 'planner');
+    for (let v of VIEWS) {
+      let on = v === view;
+      document.getElementById(`${v}-view`).classList.toggle('active', on);
+      let btn = document.getElementById(`switch-${v}`);
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-pressed', String(on));
+      document.body.classList.toggle(`view-${v}`, on);
+    }
+    document.querySelector('.view-switch').style.setProperty('--view-index', VIEWS.indexOf(view));
+    renderInsights();
+  }
+
+  // ---- Insights ----
+  function monthPhase(y, m) {
+    let now = new Date();
+    let viewed = y * 12 + m, current = now.getFullYear() * 12 + now.getMonth();
+    return viewed < current ? 'past' : viewed > current ? 'future' : 'current';
+  }
+
+  function renderPace(st, phase) {
+    let name = MONTH_NAMES[viewMonth];
+    let headline, pill = null, pillClass = '', note, expected = null;
+    if (phase === 'future') {
+      headline = 'Not started';
+      note = `${st.presence} days planned for your ${st.target} h target.`;
+    } else if (phase === 'past') {
+      let diff = st.totalLogged - st.target;
+      headline = Math.abs(diff) < 0.25 ? 'Hit your target' : diff > 0 ? `${fmt(diff)} over target` : `${fmt(-diff)} short of target`;
+      pill = diff > -0.25 ? 'Complete' : 'Short';
+      pillClass = diff > -0.25 ? 'good' : 'behind';
+      note = `${name} finished with ${fmt(st.totalLogged)} logged.`;
+    } else if (st.presentBeforeToday === 0 || st.presence === 0) {
+      headline = 'Just getting started';
+      note = 'Your pace appears after your first full working day.';
+    } else {
+      expected = st.target * st.presentBeforeToday / st.presence;
+      let diff = st.hoursBeforeToday - expected;
+      headline = Math.abs(diff) < 0.25 ? 'On pace' : diff > 0 ? `${fmt(diff)} ahead` : `${fmt(-diff)} behind`;
+      pill = Math.abs(diff) < 0.25 ? '✓ On pace' : diff > 0 ? '↑ Ahead' : '↓ Behind';
+      pillClass = diff > -0.25 ? 'good' : 'behind';
+      note = `Up to yesterday: ${fmt(st.hoursBeforeToday)} logged, ${fmt(expected)} expected.`;
+    }
+    let shown = phase === 'current' ? st.hoursToDate : st.totalLogged;
+    let fillPct = Math.min(100, st.target > 0 ? shown / st.target * 100 : 0);
+    let markHTML = expected !== null ? `<div class="meter-mark" style="left:${Math.min(100, expected / st.target * 100).toFixed(1)}%"></div>` : '';
+    return `
+      <div class="tracker-card">
+        <div class="tracker-label">Pace</div>
+        <div class="pace-head">
+          <div class="pace-value">${headline}</div>
+          ${pill ? `<div class="pace-pill ${pillClass}">${pill}</div>` : ''}
+        </div>
+        <div class="insight-sub">${note}</div>
+        <div class="meter" role="img" aria-label="${fmt(shown)} logged of ${st.target} hour target"><div class="meter-fill" style="width:${fillPct.toFixed(1)}%"></div>${markHTML}</div>
+        <div class="meter-caption"><span>${fmt(shown)} logged</span><span>${st.target} h target</span></div>
+        ${expected !== null ? '<div class="insight-sub" style="margin:6px 0 0;">The small line marks where you should be by now.</div>' : ''}
+      </div>`;
+  }
+
+  function barRow(label, hours, scale, opts) {
+    let pct = scale > 0 ? Math.min(100, hours / scale * 100) : 0;
+    let targetHTML = opts && opts.target ? `<div class="bar-target" style="left:${Math.min(100, opts.target / scale * 100).toFixed(1)}%"></div>` : '';
+    let aria = `${label}: ${fmt(hours)}${opts && opts.target ? ` of ${opts.target} h target` : ''}`;
+    return `
+      <div class="bar-row${opts && opts.current ? ' current' : ''}" role="listitem" aria-label="${aria}" title="${aria}">
+        <div class="bar-label">${label}</div>
+        <div class="bar-plot"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div>${targetHTML}</div>
+        <div class="bar-value${hours > 0 ? '' : ' empty'}">${fmt(hours)}</div>
+      </div>`;
+  }
+
+  function renderWeeks() {
+    let total = daysInMonth(viewYear, viewMonth);
+    let short = MONTH_NAMES[viewMonth].slice(0, 3);
+    let weeks = [];
+    let current = null;
+    for (let d = 1; d <= total; d++) {
+      let isMonday = new Date(viewYear, viewMonth, d).getDay() === 1;
+      if (!current || isMonday) {
+        current = { first: d, last: d, hours: 0 };
+        weeks.push(current);
+      }
+      current.last = d;
+      current.hours += getTotalHoursForDayKey(`${viewYear}-${viewMonth}-${d}`);
+    }
+    let scale = Math.max(...weeks.map(w => w.hours), 1);
+    let rows = weeks.map(w => barRow(`${short} ${w.first === w.last ? w.first : `${w.first}–${w.last}`}`, w.hours, scale)).join('');
+    return `
+      <div class="tracker-card">
+        <div class="insight-title">Hours by week</div>
+        <div class="insight-sub">Weeks run Monday to Sunday.</div>
+        <div class="bar-rows single" role="list">${rows}</div>
+      </div>`;
+  }
+
+  function renderMonths() {
+    let months = [];
+    for (let i = 5; i >= 0; i--) {
+      let dt = new Date(viewYear, viewMonth - i, 1);
+      let y = dt.getFullYear(), m = dt.getMonth();
+      let hasData = i === 0 || logs.some(l => l.monthKey === `${y}-${m}`)
+        || Object.keys(loggedHours).some(k => k.startsWith(`${y}-${m}-`));
+      let st = calcStatsFor(y, m);
+      months.push({ y, m, hours: st.totalLogged, target: hasData ? st.target : 0, current: i === 0 });
+    }
+    let scale = Math.max(...months.map(x => Math.max(x.hours, x.target)), 1);
+    let rows = months.map(x => barRow(`${MONTH_NAMES[x.m].slice(0, 3)} ${x.y}`, x.hours, scale, { target: x.target, current: x.current })).join('');
+    return `
+      <div class="tracker-card">
+        <div class="insight-title">Last 6 months</div>
+        <div class="insight-sub">The small line marks each month's target.</div>
+        <div class="bar-rows" role="list">${rows}</div>
+      </div>`;
+  }
+
+  function fmtMinutesOfDay(mins) {
+    let dt = new Date(2000, 0, 1, Math.floor(mins / 60), Math.round(mins % 60));
+    return formatTime12(dt);
+  }
+
+  function renderTypicalDay() {
+    let firstStart = {}, lastEnd = {};
+    for (let l of getMonthLogs()) {
+      if (isMaskedDay(l.dayKey)) continue;
+      if (firstStart[l.dayKey] === undefined || l.startTs < firstStart[l.dayKey]) firstStart[l.dayKey] = l.startTs;
+      if (lastEnd[l.dayKey] === undefined || l.endTs > lastEnd[l.dayKey]) lastEnd[l.dayKey] = l.endTs;
+    }
+    let minutesOf = (ts) => { let dt = new Date(ts); return dt.getHours() * 60 + dt.getMinutes(); };
+    let average = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    let starts = Object.values(firstStart).map(minutesOf);
+    let ends = Object.values(lastEnd).map(minutesOf);
+
+    let todayMs = atMidnightOf(new Date());
+    let worked = [];
+    for (let d = 1; d <= daysInMonth(viewYear, viewMonth); d++) {
+      if (new Date(viewYear, viewMonth, d).getTime() > todayMs) break;
+      let h = getTotalHoursForDayKey(`${viewYear}-${viewMonth}-${d}`);
+      if (h > 0) worked.push(h);
+    }
+    let tile = (label, value, sub) => `
+      <div class="stat-card">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value">${value}</div>
+        <div class="stat-sub">${sub}</div>
+      </div>`;
+    return `
+      <div class="stats-grid insight-stats">
+        ${tile('Average start', starts.length ? fmtMinutesOfDay(average(starts)) : '—', starts.length ? `from ${starts.length} tracked ${starts.length === 1 ? 'day' : 'days'}` : 'uses tracker logs')}
+        ${tile('Average stop', ends.length ? fmtMinutesOfDay(average(ends)) : '—', ends.length ? `from ${ends.length} tracked ${ends.length === 1 ? 'day' : 'days'}` : 'uses tracker logs')}
+        ${tile('Average day', worked.length ? fmt(average(worked)) : '—', `over ${worked.length} worked ${worked.length === 1 ? 'day' : 'days'}`)}
+        ${tile('Longest day', worked.length ? fmt(Math.max(...worked)) : '—', `in ${MONTH_NAMES[viewMonth]}`)}
+      </div>`;
+  }
+
+  function formatMoney(amount) {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency: settings.currency }).format(amount);
+  }
+
+  function renderEarnings(st, phase) {
+    let out = document.getElementById('earnings-out');
+    if (!(settings.hourlyRate > 0)) {
+      out.innerHTML = `<div class="tracker-note" style="margin-top:0;">Enter your rate to see an estimate. It's only stored on this device.</div>`;
+      return;
+    }
+    let hours = phase === 'current' ? st.hoursToDate : st.totalLogged;
+    let label = phase === 'future' ? 'Planned' : phase === 'current' ? 'Earned so far' : 'Earned';
+    out.innerHTML = `
+      <div class="earn-grid">
+        <div>
+          <div class="stat-label">${label}</div>
+          <div class="stat-value">${formatMoney(hours * settings.hourlyRate)}</div>
+          <div class="stat-sub">${fmt(hours)} in ${MONTH_NAMES[viewMonth]}</div>
+        </div>
+        <div>
+          <div class="stat-label">At your target</div>
+          <div class="stat-value">${formatMoney(st.target * settings.hourlyRate)}</div>
+          <div class="stat-sub">${st.target} h</div>
+        </div>
+      </div>
+      <div class="tracker-note">Before tax. Every month uses the rate above.</div>`;
+  }
+
+  function renderInsights() {
+    if (activeView !== 'insights') return;
+    let st = calcStatsFor(viewYear, viewMonth);
+    let phase = monthPhase(viewYear, viewMonth);
+    document.getElementById('insights-content').innerHTML =
+      renderPace(st, phase) + renderTypicalDay() + renderWeeks() + renderMonths();
+    renderEarnings(st, phase);
+  }
+
+  function bindEarnings() {
+    let rate = document.getElementById('hourly-rate');
+    let currency = document.getElementById('hourly-currency');
+    currency.innerHTML = CURRENCIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    currency.value = settings.currency;
+    rate.value = settings.hourlyRate > 0 ? settings.hourlyRate : '';
+    rate.addEventListener('input', () => {
+      let val = parseFloat(rate.value);
+      settings.hourlyRate = Number.isFinite(val) && val > 0 ? val : 0;
+      save();
+      renderInsights();
+    });
+    currency.addEventListener('change', () => {
+      settings.currency = currency.value;
+      save();
+      renderInsights();
+    });
+  }
+
+  // ---- Reminders ----
+  // There's no server, so these can only fire while the app is open or still
+  // running in the background. Anything missed shows when the app is next opened.
+  function notificationsSupported() {
+    return 'Notification' in window;
+  }
+
+  function renderReminderUI() {
+    let r = settings.reminders;
+    document.getElementById('reminder-start').checked = r.start;
+    document.getElementById('reminder-goal').checked = r.goal;
+    document.getElementById('reminder-start-time').value = r.startTime;
+    let count = (r.start ? 1 : 0) + (r.goal ? 1 : 0);
+    document.getElementById('reminders-summary').textContent = count ? `${count} on` : 'Off';
+    let note;
+    if (!notificationsSupported()) {
+      note = 'This browser can\'t show notifications, so reminders only appear inside the app. On iPhone, add the app to your Home Screen to get them.';
+    } else if (Notification.permission === 'denied') {
+      note = 'Notifications are blocked in your browser settings, so reminders only appear inside the app.';
+    } else {
+      note = 'These work while the app is open or running in the background. Phones often pause background apps, so a reminder may only show when you reopen the app.';
+    }
+    document.getElementById('reminder-note').textContent = note;
+  }
+
+  async function sendReminder(title, body, action) {
+    if (document.visibilityState === 'visible') {
+      showToast(`${title} ${body}`, action, 15000);
+      return;
+    }
+    try {
+      let reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+      if (reg) await reg.showNotification(title, { body, icon: 'icon-192.png', tag: 'hours-planner-reminder' });
+      else new Notification(title, { body, icon: 'icon-192.png' });
+    } catch (e) {
+      showToast(`${title} ${body}`, action, 15000);
+    }
+  }
+
+  function checkReminders() {
+    let r = settings.reminders;
+    if (!r.start && !r.goal) return;
+    let canNotify = notificationsSupported() && Notification.permission === 'granted';
+    // Without notification permission, wait until the app is visible so it isn't missed.
+    if (document.visibilityState !== 'visible' && !canNotify) return;
+
+    let now = new Date();
+    let todayKey = getDayKeyFromDate(now);
+    if (!isPresent(peekDayState(todayKey))) return;
+    let hours = getTotalHoursForDayKey(todayKey);
+
+    if (r.start && r.lastStartDay !== todayKey && !timerState.active && hours === 0 && toHHMM(now) >= r.startTime) {
+      r.lastStartDay = todayKey;
+      save();
+      sendReminder('Time to start?', 'No hours logged today yet.', { label: 'Start timer', run: () => { startTimer(); render(); } });
+    }
+    if (r.goal && r.lastGoalDay !== todayKey) {
+      let needed = calcStatsFor(now.getFullYear(), now.getMonth()).hPerRemaining;
+      if (needed > 0 && hours >= needed) {
+        r.lastGoalDay = todayKey;
+        save();
+        sendReminder("Today's hours reached.", `You've logged ${fmt(hours)} of ${fmt(needed)} needed.`);
+      }
+    }
+  }
+
+  function bindReminders() {
+    let onToggle = async (key, el) => {
+      settings.reminders[key] = el.checked;
+      if (el.checked && notificationsSupported() && Notification.permission === 'default') {
+        try { await Notification.requestPermission(); } catch (e) {}
+      }
+      save();
+      renderReminderUI();
+      checkReminders();
+    };
+    let startEl = document.getElementById('reminder-start');
+    let goalEl = document.getElementById('reminder-goal');
+    startEl.addEventListener('change', () => onToggle('start', startEl));
+    goalEl.addEventListener('change', () => onToggle('goal', goalEl));
+    document.getElementById('reminder-start-time').addEventListener('change', (e) => {
+      if (!e.target.value) { renderReminderUI(); return; }
+      settings.reminders.startTime = e.target.value;
+      settings.reminders.lastStartDay = null;
+      save();
+      checkReminders();
+    });
+    renderReminderUI();
   }
 
   function bindBackgroundParallax() {
@@ -1851,13 +2594,15 @@
 
   function bindSwipe() {
     let app = document.getElementById('app');
-    let sx = 0, sy = 0, dx = 0, dy = 0;
+    let sx = 0, sy = 0, dx = 0, dy = 0, ignore = false;
     app.addEventListener('touchstart', (e) => {
       if (!e.touches[0]) return;
       sx = e.touches[0].clientX;
       sy = e.touches[0].clientY;
       dx = 0;
       dy = 0;
+      // Dragging a control or moving inside a pop-up shouldn't change the view.
+      ignore = !!e.target.closest('input, select, textarea, [role="dialog"]');
     }, { passive: true });
     app.addEventListener('touchmove', (e) => {
       if (!e.touches[0]) return;
@@ -1865,9 +2610,9 @@
       dy = e.touches[0].clientY - sy;
     }, { passive: true });
     app.addEventListener('touchend', () => {
-      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
-      if (dx < 0) setView('tracker');
-      if (dx > 0) setView('planner');
+      if (ignore || Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy)) return;
+      let next = VIEWS.indexOf(activeView) + (dx < 0 ? 1 : -1);
+      if (next >= 0 && next < VIEWS.length) setView(VIEWS[next]);
     });
   }
 
@@ -1996,6 +2741,16 @@
   function updateExportSummary() {
     let box = document.getElementById('export-summary');
     let btn = document.getElementById('export-download');
+    let format = exportOpts.format;
+    let isCsv = format === 'csv';
+    document.getElementById('export-content-section').style.display = isCsv ? '' : 'none';
+    document.getElementById('export-name-section').style.display = format === 'pdf' ? '' : 'none';
+    document.getElementById('export-format-hint').textContent = {
+      csv: 'Opens in Excel, Numbers or Google Sheets.',
+      pdf: 'A timesheet that\'s ready to print, sign or send.',
+      json: 'The selected dates, for use in other tools. To copy everything, use Backup below.'
+    }[format];
+    btn.textContent = `Download ${format.toUpperCase()}`;
     let range = getExportRange();
     if (range.error) {
       box.className = 'export-summary error';
@@ -2009,12 +2764,9 @@
     box.innerHTML = `<strong>${days.length} ${days.length === 1 ? 'day' : 'days'}</strong> · ${presentDays} present · ${sessions.length} time ${sessions.length === 1 ? 'log' : 'logs'} · <strong>${fmt(totalHours)}</strong> total`;
     btn.disabled = false;
 
-    let isCsv = exportOpts.format === 'csv';
-    document.getElementById('export-content-section').style.display = isCsv ? '' : 'none';
     document.getElementById('export-content-hint').textContent = exportOpts.content === 'daily'
       ? 'One row per day: status, tracked time, manual adjustments and total.'
       : 'One row per start/stop session from the tracker.';
-    btn.textContent = `Download ${isCsv ? 'CSV' : 'JSON'}`;
   }
 
   function csvCell(v) {
@@ -2022,11 +2774,366 @@
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   }
 
-  function buildExportFile() {
+  // ---- PDF timesheet ----
+  let jsPdfPromise = null;
+  function loadJsPDF() {
+    if (window.jspdf) return Promise.resolve(window.jspdf.jsPDF);
+    if (!jsPdfPromise) {
+      jsPdfPromise = new Promise((resolve, reject) => {
+        let script = document.createElement('script');
+        script.src = 'vendor/jspdf.umd.min.js';
+        script.onload = () => window.jspdf ? resolve(window.jspdf.jsPDF) : reject(new Error('PDF library unavailable'));
+        script.onerror = () => {
+          jsPdfPromise = null;
+          script.remove();
+          reject(new Error('PDF library unavailable'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+    return jsPdfPromise;
+  }
+
+  function buildTimesheetPdf(JsPDF, from, to, data) {
+    const INK = [16, 33, 28], SECONDARY = [69, 96, 89], MUTED = [113, 136, 129];
+    const RULE = [228, 236, 232], TINT = [244, 246, 244], ABSENT_BG = [255, 243, 238], ABSENT_TEXT = [164, 75, 39];
+    const ACCENT_A = [106, 74, 224], ACCENT_B = [47, 127, 241], HIGHLIGHT = [240, 238, 255];
+    const W = 210, M = 16, RIGHT = W - M, TABLE_LIMIT = 283, ROW_H = 5.9;
+    const COL = { date: M + 3, status: M + 37, start: M + 100, end: M + 124, hours: RIGHT - 3 };
+
+    let doc = new JsPDF({ unit: 'mm', format: 'a4' });
+    let text = (str, x, y, opts = {}) => {
+      doc.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+      doc.setFontSize(opts.size || 9);
+      doc.setTextColor(...(opts.color || INK));
+      doc.text(String(str), x, y, { align: opts.align || 'left' });
+    };
+    let shortDate = (dt) => `${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0, 3)} ${dt.getFullYear()}`;
+
+    let isWholeMonths = from.getDate() === 1 && new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1).getDate() === 1;
+    let isSingleMonth = isWholeMonths && from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth();
+    let period = isSingleMonth ? `${MONTH_NAMES[from.getMonth()]} ${from.getFullYear()}` : `${shortDate(from)} – ${shortDate(to)}`;
+    doc.setProperties({ title: `Timesheet ${period}`, creator: 'Hours Planner' });
+
+    let band = () => {
+      const STEPS = 60;
+      for (let i = 0; i < STEPS; i++) {
+        let t = i / (STEPS - 1);
+        doc.setFillColor(...ACCENT_A.map((a, c) => Math.round(a + (ACCENT_B[c] - a) * t)));
+        doc.rect(i * W / STEPS, 0, W / STEPS + 0.4, 4, 'F');
+      }
+    };
+    let tableHeader = (y) => {
+      for (let [label, x, align] of [['Date', COL.date], ['Status', COL.status], ['Start', COL.start], ['End', COL.end], ['Hours', COL.hours, 'right']]) {
+        text(label.toUpperCase(), x, y, { size: 7.5, bold: true, color: SECONDARY, align: align || 'left' });
+      }
+      doc.setDrawColor(...SECONDARY);
+      doc.setLineWidth(0.3);
+      doc.line(M, y + 2, RIGHT, y + 2);
+      return y + 2;
+    };
+
+    // Header
+    band();
+    text('Timesheet', M, 22, { size: 24, bold: true });
+    text(period, RIGHT, 17.5, { size: 12, bold: true, align: 'right' });
+    text(`Generated ${shortDate(new Date())}`, RIGHT, 22.5, { size: 8.5, color: MUTED, align: 'right' });
+    if (settings.pdfName) text(settings.pdfName, M, 29, { size: 11, color: SECONDARY });
+
+    // Summary
+    let daysWorked = data.days.filter(d => d.totalHours > 0).length;
+    let absentDays = data.days.filter(d => d.status === 'absent').length;
+    let tiles = [{ label: 'Total hours', value: fmt(data.totalHours), sub: `${round2(data.totalHours)} h`, highlight: true }];
+    if (isWholeMonths) {
+      let target = data.targets.reduce((sum, t) => sum + t.targetHours, 0);
+      let diff = data.totalHours - target;
+      tiles.push({ label: 'Target', value: `${target}h00`, sub: isSingleMonth ? 'this month' : `${data.targets.length} months` });
+      tiles.push({ label: 'Difference', value: `${diff < 0 ? '-' : '+'}${fmt(Math.abs(diff))}`, sub: diff < 0 ? 'under target' : 'over target' });
+    } else {
+      tiles.push({ label: 'Average day', value: daysWorked ? fmt(data.totalHours / daysWorked) : '—', sub: 'on days worked' });
+      tiles.push({ label: 'Absent', value: absentDays, sub: absentDays === 1 ? 'day' : 'days' });
+    }
+    tiles.push({ label: 'Days worked', value: daysWorked, sub: isWholeMonths ? `${absentDays} absent` : `of ${data.days.length} days` });
+    const GAP = 3, TILE_W = (RIGHT - M - GAP * (tiles.length - 1)) / tiles.length;
+    tiles.forEach((tile, i) => {
+      let x = M + i * (TILE_W + GAP);
+      doc.setFillColor(...(tile.highlight ? HIGHLIGHT : TINT));
+      doc.roundedRect(x, 35, TILE_W, 21, 2, 2, 'F');
+      text(tile.label.toUpperCase(), x + 3.5, 41, { size: 7, bold: true, color: tile.highlight ? ACCENT_A : SECONDARY });
+      text(tile.value, x + 3.5, 48.5, { size: 15, bold: true, color: tile.highlight ? ACCENT_A : INK });
+      text(tile.sub, x + 3.5, 53, { size: 7.5, color: MUTED });
+    });
+
+    // Table
+    let sessionsByDate = {};
+    for (let l of data.sessions) {
+      let key = toISODate(new Date(l.startTs));
+      (sessionsByDate[key] = sessionsByDate[key] || []).push(l);
+    }
+    let todayMs = atMidnightOf(new Date());
+    let y = tableHeader(64);
+    for (let day of data.days) {
+      if (y + ROW_H > TABLE_LIMIT) {
+        doc.addPage();
+        band();
+        text(`Timesheet · ${period}`, M, 12, { size: 9, color: SECONDARY });
+        y = tableHeader(20);
+      }
+      let dt = fromISODate(day.date);
+      let present = isPresent(day.status);
+      let isOver = dt.getTime() < todayMs;
+      let statusLabel = {
+        absent: 'Absent',
+        weekend: 'Weekend',
+        'weekend-worked': 'Weekend worked',
+        workday: day.totalHours > 0 ? 'Worked' : isOver ? 'No hours' : ''
+      }[day.status];
+      let quiet = day.status === 'weekend' || (day.status === 'workday' && day.totalHours === 0);
+      let rowColor = day.status === 'absent' ? ABSENT_TEXT : quiet ? MUTED : INK;
+
+      if (day.status === 'absent' || day.status === 'weekend') {
+        doc.setFillColor(...(day.status === 'absent' ? ABSENT_BG : TINT));
+        doc.rect(M, y, RIGHT - M, ROW_H, 'F');
+      }
+      let baseline = y + ROW_H - 1.8;
+      text(`${day.weekday} ${dt.getDate()} ${MONTH_NAMES[dt.getMonth()].slice(0, 3)}`, COL.date, baseline, { color: rowColor, bold: day.totalHours > 0 });
+      text(statusLabel, COL.status, baseline, { color: rowColor });
+      let daySessions = present ? sessionsByDate[day.date] : null;
+      if (daySessions && daySessions.length) {
+        text(toHHMM(new Date(Math.min(...daySessions.map(s => s.startTs)))), COL.start, baseline);
+        text(toHHMM(new Date(Math.max(...daySessions.map(s => s.endTs)))), COL.end, baseline);
+      }
+      if (present && day.totalHours > 0) text(fmtColon(day.totalHours), COL.hours, baseline, { bold: true, align: 'right' });
+      y += ROW_H;
+      doc.setDrawColor(...RULE);
+      doc.setLineWidth(0.15);
+      doc.line(M, y, RIGHT, y);
+    }
+
+    // Total and signatures
+    const TOTAL_H = 8, SIGNATURE_H = 20;
+    if (y + TOTAL_H + SIGNATURE_H > TABLE_LIMIT) {
+      doc.addPage();
+      band();
+      y = 14;
+    }
+    doc.setDrawColor(...SECONDARY);
+    doc.setLineWidth(0.3);
+    doc.line(M, y, RIGHT, y);
+    text('Total', COL.date, y + 5.6, { size: 10, bold: true });
+    text(fmtColon(data.totalHours), COL.hours, y + 5.6, { size: 10, bold: true, align: 'right' });
+    y += TOTAL_H + SIGNATURE_H - 4;
+    let signatureWidth = (RIGHT - M - 10) / 2;
+    [['Employee signature', M], ['Approved by', M + signatureWidth + 10]].forEach(([label, x]) => {
+      doc.setDrawColor(...MUTED);
+      doc.setLineWidth(0.2);
+      doc.line(x, y, x + signatureWidth, y);
+      text(label, x, y + 3.6, { size: 7.5, color: MUTED });
+    });
+
+    // Footer
+    let pages = doc.getNumberOfPages();
+    for (let p = 1; p <= pages; p++) {
+      doc.setPage(p);
+      text('Hours Planner', M, 291, { size: 7.5, color: MUTED });
+      text(`Page ${p} of ${pages}`, RIGHT, 291, { size: 7.5, color: MUTED, align: 'right' });
+    }
+    return doc.output('blob');
+  }
+
+  // ---- Backup and restore ----
+  const BACKUP_VERSION = 1;
+  const VALID_STATES = ['workday', 'absent', 'weekend', 'weekend-worked'];
+
+  function makeLogId(startTs) {
+    return `${startTs}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  // Files can be edited by hand, so nothing in them is trusted as-is.
+  function normalizeLog(raw) {
+    let startTs = Number(raw && raw.startTs);
+    let endTs = Number(raw && raw.endTs);
+    if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) return null;
+    let start = new Date(startTs);
+    if (Number.isNaN(start.getTime())) return null;
+    endTs = Math.min(endTs, midnightAfter(start));
+    if (endTs <= startTs) return null;
+    return {
+      id: /^[\w-]{1,64}$/.test(raw.id) ? raw.id : makeLogId(startTs),
+      startTs,
+      endTs,
+      dayKey: getDayKeyFromDate(start),
+      monthKey: getMonthKeyFromDate(start)
+    };
+  }
+
+  function clampTarget(v) {
+    let n = Math.round(Number(v));
+    return Number.isFinite(n) && n >= 1 && n <= 300 ? n : null;
+  }
+
+  function sanitizeState(d) {
+    let state = { monthTargets: {}, dayStates: {}, loggedHours: {}, logs: [], settings: mergeSettings(d.settings) };
+    for (let [k, v] of Object.entries(d.monthTargets || {})) {
+      let t = clampTarget(v);
+      if (/^\d{4}-\d{1,2}$/.test(k) && t !== null) state.monthTargets[k] = t;
+    }
+    for (let [k, v] of Object.entries(d.dayStates || {})) {
+      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(k) && VALID_STATES.includes(v)) state.dayStates[k] = v;
+    }
+    for (let [k, v] of Object.entries(d.loggedHours || {})) {
+      if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(k) && Number.isFinite(v)) state.loggedHours[k] = v;
+    }
+    state.logs = (Array.isArray(d.logs) ? d.logs : []).map(normalizeLog).filter(Boolean);
+    let startTs = d.timerState && Number(d.timerState.startTs);
+    let timerIsToday = d.timerState && d.timerState.active === true && Number.isFinite(startTs) && startTs <= Date.now() && sameDay(new Date(startTs), new Date());
+    state.timerState = timerIsToday
+      ? { active: true, startTs, startDayKey: getDayKeyFromDate(new Date(startTs)) }
+      : { active: false, startTs: null, startDayKey: null };
+    return state;
+  }
+
+  function parseRestoreFile(text) {
+    let file;
+    try {
+      file = JSON.parse(text);
+    } catch (e) {
+      return { error: "That file couldn't be read." };
+    }
+    if (!file || typeof file !== 'object' || file.app !== 'Hours Planner') {
+      return { error: "That isn't an Hours Planner file." };
+    }
+    if (file.type === 'backup' && file.data && typeof file.data === 'object') {
+      if (file.version > BACKUP_VERSION) return { error: 'That backup was made by a newer version of the app. Reload and try again.' };
+      return { kind: 'full', state: sanitizeState(file.data), exportedAt: file.exportedAt };
+    }
+    if (Array.isArray(file.days) && Array.isArray(file.sessions) && file.days.length) {
+      return { kind: 'range', file };
+    }
+    return { error: "That file doesn't contain any data to restore." };
+  }
+
+  // Older JSON exports only cover their own dates, so they update those dates and leave the rest.
+  function mergeRangeExport(file) {
+    let starts = [];
+    for (let day of file.days) {
+      let dt = fromISODate(day.date);
+      if (!dt) continue;
+      starts.push(dt.getTime());
+      let k = getDayKeyFromDate(dt);
+      if (VALID_STATES.includes(day.status)) dayStates[k] = day.status;
+      let manual = Number(day.manualHours);
+      if (Number.isFinite(manual) && manual !== 0) loggedHours[k] = manual;
+      else delete loggedHours[k];
+    }
+    if (!starts.length) return false;
+    let fromTs = Math.min(...starts);
+    let toTs = midnightAfter(new Date(Math.max(...starts)));
+    logs = logs.filter(l => l.startTs < fromTs || l.startTs >= toTs);
+    for (let s of file.sessions) {
+      let entry = normalizeLog({ startTs: Date.parse(s.startISO), endTs: Date.parse(s.endISO) });
+      if (entry) logs.push(entry);
+    }
+    for (let t of Array.isArray(file.monthlyTargets) ? file.monthlyTargets : []) {
+      let match = /^(\d{4})-(\d{2})$/.exec(t.month || '');
+      let target = clampTarget(t.targetHours);
+      if (match && target !== null) monthTargets[`${match[1]}-${Number(match[2]) - 1}`] = target;
+    }
+    return true;
+  }
+
+  function refreshAfterRestore() {
+    bindSettingsToInputs();
+    renderBackupStatus();
+    render();
+  }
+
+  async function restoreFromFile(fileObj) {
+    if (fileObj.size > 20 * 1024 * 1024) {
+      showToast("That file is too large to be an Hours Planner backup.");
+      return;
+    }
+    let parsed = parseRestoreFile(await fileObj.text());
+    if (parsed.error) {
+      showToast(parsed.error);
+      return;
+    }
+    let question;
+    if (parsed.kind === 'full') {
+      let when = Date.parse(parsed.exportedAt);
+      let label = Number.isNaN(when) ? '' : ` from ${formatDate(new Date(when))}`;
+      question = `Replace everything on this device with the backup${label}? It contains ${parsed.state.logs.length} time logs.`;
+    } else {
+      let first = parsed.file.days[0].date, last = parsed.file.days[parsed.file.days.length - 1].date;
+      question = `This file only covers ${first} to ${last}. Update those dates and keep everything else?`;
+    }
+    if (!confirm(question)) return;
+
+    let snapshot = JSON.stringify({ monthTargets, dayStates, loggedHours, logs, timerState, settings });
+    if (parsed.kind === 'full') {
+      ({ monthTargets, dayStates, loggedHours, logs, timerState, settings } = parsed.state);
+    } else if (!mergeRangeExport(parsed.file)) {
+      showToast("That file doesn't contain any data to restore.");
+      return;
+    }
+    let undo = () => {
+      ({ monthTargets, dayStates, loggedHours, logs, timerState, settings } = JSON.parse(snapshot));
+      save();
+      refreshAfterRestore();
+      showToast('Restore undone.');
+    };
+    let saved = save();
+    refreshAfterRestore();
+    closeExportModal();
+    if (saved) showToast('Backup restored.', { label: 'Undo', run: undo }, 15000);
+  }
+
+  function downloadBackup() {
+    settings.lastBackupAt = new Date().toISOString();
+    let payload = {
+      app: 'Hours Planner',
+      type: 'backup',
+      version: BACKUP_VERSION,
+      exportedAt: settings.lastBackupAt,
+      data: { monthTargets, dayStates, loggedHours, logs, timerState, settings }
+    };
+    save();
+    renderBackupStatus();
+    return deliverFile({
+      name: `hours_backup_${toISODate(new Date())}.json`,
+      type: 'application/json',
+      text: JSON.stringify(payload, null, 2)
+    });
+  }
+
+  function renderBackupStatus() {
+    let at = settings.lastBackupAt;
+    document.getElementById('backup-status').textContent =
+      `Saves all your months and settings in one file you can restore later. ${at ? `Last saved ${formatDate(new Date(at))}.` : 'No backup saved yet.'}`;
+  }
+
+  function bindSettingsToInputs() {
+    document.getElementById('hourly-rate').value = settings.hourlyRate > 0 ? settings.hourlyRate : '';
+    document.getElementById('hourly-currency').value = settings.currency;
+    document.getElementById('export-name').value = settings.pdfName;
+    renderReminderUI();
+  }
+
+  async function buildExportFile() {
     let range = getExportRange();
     if (range.error) return null;
-    let { days, sessions, targets, totalHours } = buildExportData(range.from, range.to);
+    let data = buildExportData(range.from, range.to);
+    let { days, sessions, targets, totalHours } = data;
     let fromStr = toISODate(range.from), toStr = toISODate(range.to);
+
+    if (exportOpts.format === 'pdf') {
+      let JsPDF = await loadJsPDF();
+      return {
+        name: `timesheet_${fromStr}_to_${toStr}.pdf`,
+        type: 'application/pdf',
+        blob: buildTimesheetPdf(JsPDF, range.from, range.to, data)
+      };
+    }
 
     if (exportOpts.format === 'json') {
       let payload = {
@@ -2068,9 +3175,19 @@
   }
 
   async function downloadExport() {
-    let file = buildExportFile();
+    let file;
+    try {
+      file = await buildExportFile();
+    } catch (e) {
+      showToast("Couldn't create the PDF. Check your connection and try again.");
+      return;
+    }
     if (!file) return;
-    let blob = new Blob([file.text], { type: file.type });
+    return deliverFile(file);
+  }
+
+  async function deliverFile(file) {
+    let blob = file.blob || new Blob([file.text], { type: file.type });
 
     // On phones (esp. installed iOS PWAs) the share sheet is more reliable than a download link.
     let isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -2101,6 +3218,8 @@
   function openExportModal() {
     renderExportPresets();
     applyExportPreset(exportOpts.preset === 'custom' ? 'viewed' : exportOpts.preset);
+    renderBackupStatus();
+    document.getElementById('export-name').value = settings.pdfName;
     document.getElementById('export-backdrop').classList.remove('hidden');
   }
 
@@ -2116,6 +3235,8 @@
       exportOpts[key] = btn.dataset.value;
       wrap.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
       updateExportSummary();
+      // Load ahead of time so the phone share sheet still opens from the Download tap.
+      if (exportOpts.format === 'pdf') loadJsPDF().catch(() => {});
     });
   }
 
@@ -2137,17 +3258,39 @@
     document.getElementById('export-to').addEventListener('input', onDateEdit);
     bindSegmented('export-format', 'format');
     bindSegmented('export-content', 'content');
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeExportModal();
+    document.getElementById('export-name').addEventListener('input', (e) => {
+      settings.pdfName = e.target.value;
+      save();
     });
+    document.getElementById('backup-download').onclick = downloadBackup;
+    let fileInput = document.getElementById('backup-file');
+    document.getElementById('backup-restore').onclick = () => fileInput.click();
+    fileInput.addEventListener('change', async () => {
+      let picked = fileInput.files[0];
+      fileInput.value = '';
+      if (picked) await restoreFromFile(picked);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      closeExportModal();
+      closeDayWheel();
+      closeEditLogModal();
+    });
+  }
+
+  // Refreshes everything that changes with time. Leaves the target controls
+  // alone so a value being typed isn't overwritten while the timer runs.
+  function renderLive() {
+    renderCalendar();
+    renderStats();
+    renderTracker();
+    renderInsights();
   }
 
   function render() {
     document.getElementById('month-label').textContent = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
     updateSlider();
-    renderCalendar();
-    renderStats();
-    renderTracker();
+    renderLive();
   }
 
   document.getElementById('prev').onclick = () => {
@@ -2187,6 +3330,7 @@
 
   document.getElementById('switch-planner').onclick = () => setView('planner');
   document.getElementById('switch-tracker').onclick = () => setView('tracker');
+  document.getElementById('switch-insights').onclick = () => setView('insights');
   document.getElementById('add-manual-log').onclick = addManualLog;
   document.getElementById('time-wheel-backdrop').onclick = closeDayWheel;
   document.getElementById('wheel-cancel').onclick = closeDayWheel;
@@ -2201,15 +3345,39 @@
   bindSwipe();
   bindBackgroundParallax();
   bindExport();
+  bindEarnings();
+  bindReminders();
   let now = new Date();
   document.getElementById('manual-date').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
   document.getElementById('manual-start').value = '09:00';
   document.getElementById('manual-end').value = '17:00';
   if (ticker) clearInterval(ticker);
+  // Times are shown to the minute, so only redraw when the minute changes.
+  // Redrawing every second also swallowed taps on the calendar.
+  let timerMinute = () => Math.floor((Date.now() - timerState.startTs) / 60000);
+  let lastTickMinute = timerState.active ? timerMinute() : null;
   ticker = setInterval(() => {
-    if (timerState.active) render();
+    if (!timerState.active) return;
+    let minute = timerMinute();
+    if (minute !== lastTickMinute) {
+      lastTickMinute = minute;
+      renderLive();
+    }
   }, 1000);
+  setInterval(checkReminders, 30000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    renderLive();
+    checkReminders();
+  });
   render();
+  checkReminders();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 </script>
 </body>
 </html>
